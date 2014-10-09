@@ -1,0 +1,10 @@
+<procedure>
+   <param name="x1" value="-1">
+  
+  <waypoints>
+    <waypoint name="p1" x="0" y="5" height="2."/>
+  </waypoints>
+
+</procedure>
+
+

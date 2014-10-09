@@ -1,0 +1,143 @@
+<!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
+
+<flight_plan alt="150" ground_alt="147" lat0="51.990624" lon0="4.376752" max_dist_from_home="150" name="Rotorcraft Basic rlact optitrack" security_height="1">
+  <header>
+#include "autopilot.h"
+  </header>
+  <waypoints>
+    <waypoint name="HOME" x="0.0" y="0.0" height="3.0"/>
+    <waypoint name="CLIMB" x="0.0" y="0.0" height="3.0"/>
+    <waypoint name="STDBY" x="0.0" y="0.0" height="3.0"/>
+    <waypoint name="_p3" x="5.0" y="3.0" height="3.0"/>
+    <waypoint name="TD" x="2.0" y="0.0"/>
+    <waypoint name="p1" lat="51.9906266" lon="4.376766" height="3.0"/>
+    <waypoint name="p2" lat="51.9906266" lon="4.376766" height="3.0"/>
+    <waypoint name="p00" lat="51.990629" lon="4.376760" height="3.0"/>
+    <waypoint lat="51.990643" lon="4.376830" name="FA1"/>
+    <waypoint lat="51.990614" lon="4.376761" name="FA2"/>
+    <waypoint lat="51.990643" lon="4.376739" name="FA3"/>
+    <waypoint lat="51.990672" lon="4.376801" name="FA4"/>
+  </waypoints>
+  <sectors>
+    <sector color="red" name="Flight_Area">
+      <corner name="FA4"/>
+      <corner name="FA3"/>
+      <corner name="FA2"/>
+      <corner name="FA1"/>
+    </sector>
+  </sectors>
+<!-- Security exceptions -->
+  <exceptions>
+    <!--exception cond="! InsideFlight_Area(GetPosX(), GetPosY())" deroute="land here"/-->
+    <!--exception cond="GetPosAlt()>5" deroute="land here"/-->
+    <!--exception cond="!GpsFixValid()" deroute="land here"/-->
+  </exceptions>
+  <blocks>
+    <block name="Wait GPS">
+      <call fun="NavKillThrottle()"/>
+      <while cond="!GpsFixValid()"/>
+    </block>
+    <block name="Geo init">
+      <while cond="LessThan(NavBlockTime(), 10)"/>
+      <!--call fun="NavSetGroundReferenceHere()"/--> 
+      <call fun="NavSetWaypointHere(WP_HOME)"/>
+      <call fun="NavSetWaypointHere(WP_p1)"/>
+      <call fun="NavSetWaypointHere(WP_p2)"/>
+      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <call fun="NavSetWaypointHere(WP_STDBY)"/>
+      <call fun="NavSetWaypointHere(WP_TD)"/>
+      <call fun="NavSetAltitudeReferenceHere()"/>
+    </block>
+    <block name="Holding point">
+      <call fun="NavKillThrottle()"/>
+      <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
+    </block>
+    <block name="Start Engine">
+      <call fun="NavResurrect()"/>
+      <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
+    </block>
+    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
+      <exception cond="stateGetPositionEnu_f()->z > 2.0" deroute="Standby"/>
+      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <stay vmode="climb" climb="0.5" wp="CLIMB"/>
+    </block>
+    <block name="Standby" strip_button="Standby" strip_icon="home.png">
+      <stay wp="STDBY"/>
+    </block>
+     <block name="stay_p00">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+      <stay wp="p00"/>
+    </block>
+    <block name="stay_p1">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+      <stay wp="p1"/>
+    </block>
+	<block name="stay_p2">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+		<stay wp="p2"/>
+	</block>
+	<block name="increment_p2x">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+		<call fun="IncrementWaypointx(WP_p2)"/>
+		<deroute block="stay_p1"/>
+	</block>
+	<block name="increment_p1x">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+        <call fun="IncrementWaypointx(WP_p1)"/>
+		<deroute block="stay_p2"/>
+	</block>
+	<block name="increment_p2y">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+		<call fun="IncrementWaypointy(WP_p2)"/>
+		<deroute block="stay_p1"/>
+    </block>
+	<block name="increment_p1y">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+		<call fun="IncrementWaypointy(WP_p1)"/>
+		<deroute block="stay_p2"/>
+	</block>
+	<block name="learn_2acts">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+			<call fun="rlact_run(WP_p1,WP_p2)"/>
+			<go from="p1" wp="p2" hmode="route"/>   
+			<call fun="rlact_run(WP_p2,WP_p1)"/>
+			<go from="p2" wp="p1" hmode="route"/>
+		<deroute block="stay_p1"/>
+	</block>
+	<block name="deroute2learn">
+		<deroute block="learn_2acts"/>
+    </block>	
+	<block name="learn_loop">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
+			<call fun="rlact_run(WP_p1,WP_p2)"/>
+			<go from="p1" wp="p2" hmode="route"/>   
+			<call fun="rlact_run(WP_p2,WP_p1)"/>
+			<go from="p2" wp="p1" hmode="route"/>
+		<deroute block="learn_loop"/>
+	</block>
+    <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
+      <call fun="NavSetWaypointHere(WP_TD)"/>
+    </block>
+    <block name="land">
+      <go wp="TD"/>
+    </block>
+    <block name="flare">
+      <exception cond="NavDetectGround()" deroute="Holding point"/>
+      <exception cond="!nav_is_in_flight()" deroute="landed"/>
+      <call fun="NavStartDetectGround()"/>
+      <stay climb="-0.8" vmode="climb" wp="TD"/>
+    </block>
+    <block name="landed">
+      <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
+    </block>
+  </blocks>
+</flight_plan>

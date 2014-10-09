@@ -1,0 +1,87 @@
+<!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
+
+<flight_plan alt="152" ground_alt="147" lat0="51.990620" lon0="4.376755" max_dist_from_home="150" name="Rotorcraft Basic loop deroutes" security_height="100">
+  <header>
+#include "autopilot.h"
+  </header>
+  <waypoints>
+    <waypoint name="HOME" x="0.0" y="0.0" height="2."/>
+    <waypoint name="CLIMB" x="0.0" y="0.0" height="2."/>
+    <waypoint name="STDBY" x="0" y="0" height="2."/>
+    <waypoint name="p1" x="0" y="3" height="2."/>
+    <waypoint name="p2" x="2" y="3" height="2."/>
+    <waypoint name="p3" x="2" y="0" height="2."/>
+    <waypoint name="TD" x="2" y="0" height="1"/>
+  </waypoints>
+  <blocks>
+    <block name="Wait GPS">
+      <call fun="NavKillThrottle()"/>
+      <while cond="!GpsFixValid()"/>
+    </block>
+    <block name="Geo init">
+      <while cond="LessThan(NavBlockTime(), 10)"/>
+      <call fun="NavSetGroundReferenceHere()"/> 
+      <!--call fun="NavSetWaypointHere(WP_HOME)"/>-->
+      <!--<call fun="NavSetAltitudeReferenceHere()"/>-->
+    </block>
+    <block name="Holding point">
+      <call fun="NavKillThrottle()"/>
+      <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
+    </block>
+    <block name="Start Engine">
+      <call fun="NavResurrect()"/>
+      <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
+    </block>
+    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
+      <exception cond="stateGetPositionEnu_f()->z > 2.0" deroute="Standby"/>
+      <call fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <stay vmode="climb" climb="0.5" wp="CLIMB"/>
+    </block>
+    <block name="Standby" strip_button="Standby" strip_icon="home.png">
+      <stay wp="STDBY"/>
+    </block>
+     <block name="stay_home">
+      <stay wp="HOME"/>
+    </block>
+<!-- First move from home.  Block - go to wp1-->
+     <block name="stay_p1">
+      <stay wp="p1"/>
+    </block>
+     <block name="go_p2">
+        <go wp="p2"/>
+       <while cond="10 > block_time"/>
+<!--<waypoint name="p2" x="$GetPosX(WP_P2)-1" y="$GetPosY(WP_P2)-1" height="2."/>-->
+      <!--deroute block="go_p1"/-->        
+    </block>
+   <block name="go_p1">
+        <go wp="p1"/>
+       <while cond="10 > block_time"/>
+        <!--<waypoint name="p1" x="$GetPosX(WP_P1)-1" y="$GetPosY(WP_P1)-1" height="2."/>-->
+        <deroute block="go_p2"/>
+   </block> 
+    <block name="Route">
+      <go wp="p1"/>
+      <go from="p1" hmode="route" wp="p2"/>
+			<go from="p2" hmode="route" wp="p3"/>
+      <go from="p3" hmode="route" wp="HOME"/>
+      <go from="HOME" hmode="route" wp="p1"/>
+      <deroute block="land"/>
+    </block>
+    <block name="finish">
+      <go wp="TD"/>
+       <deroute block="land"/>
+    </block>
+    <block name="land">
+      <go wp="TD"/>
+    </block>
+    <block name="flare">
+      <exception cond="NavDetectGround()" deroute="Holding point"/>
+      <exception cond="!nav_is_in_flight()" deroute="landed"/>
+      <call fun="NavStartDetectGround()"/>
+      <stay climb="-0.8" vmode="climb" wp="TD"/>
+    </block>
+    <block name="landed">
+      <attitude pitch="0" roll="0" throttle="0" vmode="throttle" until="FALSE"/>
+    </block>
+  </blocks>
+</flight_plan>
