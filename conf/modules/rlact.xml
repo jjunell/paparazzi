@@ -1,0 +1,17 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="rlact">
+  <doc>
+    <description>
+	reinforcement learner chooses action
+    </description>
+  </doc>
+  <header>
+    <file name="rlact.h"/>
+  </header>
+  <init fun="rlact_init()"/>
+  <periodic fun="rlact_periodic()" freq="10"/>
+  <makefile>
+    <file name="rlact.c"/>
+  </makefile>
+</module>
