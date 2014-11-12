@@ -7,9 +7,9 @@
   <theta unit="DEG"> 0.0 </theta>
   <psi   unit="DEG"> 0.0 </psi>
 <!-- latitude in geocentric coordinates!! -->
-  <latitude  unit="DEG">  37.427895 </latitude>
-  <!--<latitude  unit="DEG">  37.6136 </latitude> -->
-  <longitude unit="DEG">-122.3569 </longitude>
+  <latitude  unit="DEG">  51.804133 </latitude>  <!-- cyberzoo-->
+  <longitude unit="DEG">  4.376755 </longitude>
+  <!--<latitude  unit="DEG">  37.6136 </latitude> --> <!-- SFO-->
 <!-- altitude is above ground level AGL -->
   <altitude  unit="M"> 0.15 </altitude>
 <!-- altitudeMSL is above sea level ASL -->

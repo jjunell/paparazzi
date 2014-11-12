@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
-<flight_plan alt="152" ground_alt="147" lat0="51.990620" lon0="4.376755" max_dist_from_home="150" name="Rotorcraft Basic loop deroutes" security_height="1">
+<flight_plan alt="152" ground_alt="147" lat0="51.990624" lon0="4.376752" max_dist_from_home="150" name="Rotorcraft Basic loop deroutes" security_height="1">
   <header>
 #include "autopilot.h"
   </header>
@@ -8,8 +8,8 @@
     <waypoint name="HOME" x="0.0" y="0.0" height="2."/>
     <waypoint name="CLIMB" x="0.0" y="0.0" height="2."/>
     <waypoint name="STDBY" x="0" y="0" height="2."/>
-    <waypoint name="p1" x="0" y="3" height="2."/>
-    <waypoint name="p2" x="2" y="3" height="2."/>
+    <waypoint name="p1" x="0.0" y="0.0" height="2."/>
+    <waypoint name="p2" x="0.0" y="0.0" height="2."/>
     <waypoint name="_p3" x="5" y="3" height="2."/>
     <waypoint name="TD" x="2" y="0" height="1"/>
     <waypoint name="variable_wp" x="2" y="0" height="2"/>
@@ -18,7 +18,6 @@
     <!--block name="Preset RL">
       <set var="RLact"    value="0"/>
     </block-->
- 
     <block name="Wait GPS">
       <call fun="NavKillThrottle()"/>
       <while cond="!GpsFixValid()"/>
@@ -51,33 +50,43 @@
      <block name="stay_p1">
       <stay wp="p1"/>
     </block>
+     <block name="stay_p2">
+      <stay wp="p2"/>
+   </block>
+     <block name="increment_p2">
+        <call fun="IncrementWaypointx(WP_p2)"/>
+	<stay wp="p1"/>
+    </block>
+   <block name="increment_p1">
+        <call fun="IncrementWaypointx(WP_p1)"/>
+	<stay wp="p2"/>
+    </block>
+<block name="learn">
+    <set var="RLbool" value="1"/>
+   <for var="i" from="1" to="2">
+        <call fun="rlact_run(WP_p1,WP_p2)"/>
+        <go from="p1" wp="p2" hmode="route"/>   
+        <call fun="rlact_run(WP_p2,WP_p1)"/>
+        <go from="p2" wp="p1" hmode="route"/>
+   </for>
+   <deroute block="learn"/>
+</block>
+<block name="run_lines">
+   <for var="i" from="1" to="3">
+        <call fun="RunLinesWP(WP_p1,WP_p2,_var_i)"/>
+        <go from="p2" wp="p1" hmode="route"/>
+       <!--stay wp="p1" until="stage_time > 1"/-->
+        <go from="p1" wp="p2" hmode="route"/>   
+   </for>     
+        <deroute block="run_lines"/>
+
+    </block>
      <block name="go_p2_stay">
         <go from="p1" wp="p2" hmode="route"/>
         <stay wp="p2"until="stage_time > 6"/>
         <go from="p2" wp="p1" hmode="route"/>
         <deroute block="go_p2_stay"/>   
-    </block>
-     <block name="increment_p2">
-        <call fun="IncrementWaypoint(WP_p1)"/>
-        <go from="p1" wp="p2" hmode="route"/>
-  <!--      <stay wp="p2" until="stage_time > 3"/> -->
-    </block>
-   <block name="increment_p1">
-        <call fun="IncrementWaypoint(WP_p2)"/>
-        <go from="p2" wp="p1" hmode="route"/>
-   <!--     <stay wp="p1" until="stage_time > 3"/> -->
-        <deroute block="increment_p2"/>
    </block> 
-<block name="run_lines">
-        <!--set var="RL.act" value="RL.act+1"/-->
-   <for var="i" from="1" to="3">
-        <call fun="RunLinesWP(WP_p1,WP_p2,_var_i)"/>
-        <go from="p2" wp="p1" hmode="route"/>
-       <stay wp="p1" until="stage_time > 4"/>
-        <go from="p1" wp="p2" hmode="route"/>   
-   </for>     
-        <deroute block="run_lines"/>
-   </block>
 <block name="loop_p1_p2">
 <!-- while loops are not working for some reason. Ask Erik why not -->
     <while cond="TRUE">

@@ -21,7 +21,10 @@
 
 /**
  * @file modules/calibration/send_imu_mag_current.c
- * Enables sending of IMU_MAG_CURRENT_CALIBRATION message.
+ * Enables sending of IMU_MAG_CUR
+ 
+ 
+ RENT_CALIBRATION message.
  */
 
 #include "subsystems/imu.h"
