@@ -1,0 +1,17 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="rlact">
+  <doc>
+    <description>
+	reinforcement learner chooses the quadrotor action and learns a V function based on rewards in environment
+    </description>
+  </doc>
+  <header>
+    <file name="rlact.h"/>
+  </header>
+  <init fun="rlact_init()"/>
+  <periodic fun="rlact_periodic()" freq="10" autorun="FALSE"/>
+  <makefile>
+    <file name="rlact.c"/>
+  </makefile>
+</module>
