@@ -32,10 +32,10 @@
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
 
-void send_rlact(void) {
-  DOWNLINK_SEND_RLACT(DefaultChannel, DefaultDevice,
-                                            &xnew);
-}
+//void send_rlact(void) {
+//  DOWNLINK_SEND_RLACT(DefaultChannel, DefaultDevice,
+//                                            &xnew);
+//}
 
 
 //*************** DECLARE VARIABLES *****************//
@@ -323,7 +323,7 @@ switch(pass){
 }  // end of rlact_run function
 
 void rlact_periodic(void) {
-if(RLbool){xnew = rand(); send_rlact();}
+//if(RLbool){xnew = rand(); send_rlact();}
 }
 
 /********************* hitsbounds subfunction *************/
