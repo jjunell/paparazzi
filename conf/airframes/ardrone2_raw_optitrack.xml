@@ -28,7 +28,7 @@
   </firmware>
 
   <modules main_freq="512">
- <!--   <load name="send_imu_mag_current.xml"/>-->
+    <load name="send_imu_mag_current.xml"/>
   <!--load name="rlact.xml"/-->
   </modules>
 

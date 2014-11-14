@@ -34,7 +34,7 @@
 
 //*************** DECLARE VARIABLES *****************//
 const int16_t del = 256;// distance to move in each action
-int8_t act, pass;
+int8_t act;
 
 //*********************** FUNCTIONS ***********************//
 void rlact_init(void) {
@@ -43,17 +43,18 @@ printf("init1\n");
 	act= 0; //initialize it
 printf("init2\n");
 	srand(time(NULL));
-  //  const int nact = 4; //number of actions = 4 (NESW)
-pass=0;
 printf("init3\n");
+  //  const int nact = 4; //number of actions = 4 (NESW)
+
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
 bool_t rlact_run(uint8_t wpa, uint8_t wpb){
-pass++;
- printf("started: pass %d\n", pass);
 
-	act = pass;
+ printf("started\n");
+
+	//act = (rand() % 8)+1;
+	act = 0;
 
     	//execute in paparazzi sim/IRL
 	switch (act){
