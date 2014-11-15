@@ -1,6 +1,6 @@
 <!DOCTYPE airframe SYSTEM "airframe.dtd">
 
-<airframe name="ardrone2_raw">
+<airframe name="ardrone2_raw_rlact_sim">
 
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
@@ -197,6 +197,7 @@
     <define name="PGAIN" value="79"/>
     <define name="DGAIN" value="100"/>
     <define name="IGAIN" value="30"/>
+    <define name="REF_MAX_SPEED" value="0.4"/>
   </section>
 
   <section name="SIMULATOR" prefix="NPS_">
@@ -211,6 +212,7 @@
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
+    <define name="ARRIVED_AT_WAYPOINT" value="0.2"/>
   </section>
 
   <section name="BAT">
