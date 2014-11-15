@@ -24,7 +24,7 @@
     </block>
     <block name="Geo init">
       <while cond="LessThan(NavBlockTime(), 10)"/>
-      <call fun="NavSetGroundReferenceHere()"/> 
+      <call fun="NavSetGroundReferenceHere()"/>
       <!--call fun="NavSetWaypointHere(WP_HOME)"/>-->
       <!--<call fun="NavSetAltitudeReferenceHere()"/>-->
     </block>
@@ -47,7 +47,7 @@
      <block name="stay_home">
       <stay wp="HOME"/>
     </block>
-     <block name="stay_p1">
+    <block name="stay_p1">
       <stay wp="p1"/>
     </block>
      <block name="stay_p2">
