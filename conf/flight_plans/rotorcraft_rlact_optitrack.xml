@@ -67,28 +67,36 @@
 	</block>
 	<block name="increment_p2x">
 		<call fun="IncrementWaypointx(WP_p2)"/>
-		<stay wp="p1"/>
+		<deroute block="stay_p1"/>
 	</block>
 	<block name="increment_p1x">
         <call fun="IncrementWaypointx(WP_p1)"/>
-		<stay wp="p2"/>
+		<deroute block="stay_p2"/>
 	</block>
 	<block name="increment_p2y">
 		<call fun="IncrementWaypointy(WP_p2)"/>
-		<stay wp="p1"/>
+		<deroute block="stay_p1"/>
     </block>
 	<block name="increment_p1y">
 		<call fun="IncrementWaypointy(WP_p1)"/>
-		<stay wp="p2"/>
+		<deroute block="stay_p2"/>
     </block>
 	<block name="learn">
-		<for var="i" from="1" to="2">
 			<call fun="rlact_run(WP_p1,WP_p2)"/>
 			<go from="p1" wp="p2" hmode="route"/>   
 			<call fun="rlact_run(WP_p2,WP_p1)"/>
 			<go from="p2" wp="p1" hmode="route"/>
-		</for>
+		<deroute block="deroute2learn"/>
+	</block>
+	<block name="deroute2learn">
 		<deroute block="learn"/>
+    </block>	
+	<block name="learn_loop">
+			<call fun="rlact_run(WP_p1,WP_p2)"/>
+			<go from="p1" wp="p2" hmode="route"/>   
+			<call fun="rlact_run(WP_p2,WP_p1)"/>
+			<go from="p2" wp="p1" hmode="route"/>
+		<deroute block="learn_loop"/>
 	</block>
     <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
       <call fun="NavSetWaypointHere(WP_TD)"/>
