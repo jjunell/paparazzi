@@ -29,7 +29,12 @@
 
   <modules main_freq="512">
     <load name="send_imu_mag_current.xml"/>
-  <!--load name="rlact.xml"/-->
+    <load name="rlact.xml"/>
+   <!-- <load name="follow.xml">
+      <define name="FOLLOW_AC_ID" value="101"/>
+      <define name="FOLLOW_WAYPOINT_ID" value="WP_p1"/>
+      <define name="FOLLOW_OFFSET_Z" value="2.0"/>
+    </load>-->
   </modules>
 
   <commands>
@@ -201,7 +206,7 @@
     <define name="REF_OMEGA" value="RadOfDeg(67.)"/>
     <define name="REF_ZETA" value="0.85"/>
     <define name="REF_MAX_ACCEL" value="5.66"/>
-    <define name="REF_MAX_SPEED" value="3"/>
+    <define name="REF_MAX_SPEED" value="0.4"/>
 
     <!-- gains -->
     <define name="PGAIN" value="116"/>
@@ -223,6 +228,7 @@
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
+    <define name="ARRIVED_AT_WAYPOINT" value="0.2"/>
   </section>
 
   <section name="BAT">
