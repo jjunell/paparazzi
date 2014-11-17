@@ -73,7 +73,7 @@ int8_t hbflag;      //hitbounds flag
     int16_t i, j, k;
     
 // for execution of RL in paparazzi
-const int del = 256;// distance to move in each action
+const int del = 128;// distance to move in each action
 static int16_t pass = 0;
 
 // policy decisions - just random for now

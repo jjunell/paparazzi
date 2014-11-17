@@ -30,9 +30,9 @@
 extern int32_t xnew; // variables that you want to use in other files
 int RLbool;
 
-#define IncrementWaypointx(_wp1) ({waypoints[_wp1].x = waypoints[_wp1].x + 256; FALSE; })
-#define IncrementWaypointy(_wp1) ({waypoints[_wp1].y = waypoints[_wp1].y + 256; FALSE; })
-#define RunLinesWP(_wp1,_wp2,rlact) ({waypoints[_wp2].x = waypoints[_wp1].x + rlact*256; FALSE; }) 
+#define IncrementWaypointx(_wp1) ({waypoints[_wp1].x = waypoints[_wp1].x + 128; FALSE; })
+#define IncrementWaypointy(_wp1) ({waypoints[_wp1].y = waypoints[_wp1].y + 128; FALSE; })
+#define RunLinesWP(_wp1,_wp2,rlact) ({waypoints[_wp2].x = waypoints[_wp1].x + rlact*128; FALSE; }) 
 
 //******* FUNCTIONS ********//
 void rlact_init(void);
