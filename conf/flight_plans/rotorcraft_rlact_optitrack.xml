@@ -12,11 +12,11 @@
     <waypoint name="TD" x="2.0" y="0.0"/>
     <waypoint name="p1" lat="51.9906266" lon="4.376766" height="2.0"/>
     <waypoint name="p2" lat="51.9906266" lon="4.376766" height="2.0"/>
-    <waypoint name="p00" lat="51.9906266" lon="4.376766" height="2.0"/>
-    <waypoint lat="51.990635" lon="4.376836" name="FA1"/>
-    <waypoint lat="51.990606" lon="4.376760" name="FA2"/>
-    <waypoint lat="51.990652" lon="4.376712" name="FA3"/>
-    <waypoint lat="51.990681" lon="4.376791" name="FA4"/>
+    <waypoint name="p00" lat="51.990629" lon="4.376760" height="2.0"/>
+    <waypoint lat="51.990643" lon="4.376830" name="FA1"/>
+    <waypoint lat="51.990614" lon="4.376761" name="FA2"/>
+    <waypoint lat="51.990643" lon="4.376739" name="FA3"/>
+    <waypoint lat="51.990672" lon="4.376801" name="FA4"/>
   </waypoints>
   <sectors>
     <sector color="red" name="Flight_Area">

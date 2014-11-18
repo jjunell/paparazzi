@@ -43,7 +43,7 @@
      <block name="stay_p00">
       <stay wp="p00"/>
     </block>
-	<block name="stay_p1">
+    <block name="stay_p1">
       <stay wp="p1"/>
     </block>
 	<block name="stay_p2">
@@ -82,21 +82,6 @@
 			<go from="p2" wp="p1" hmode="route"/>
 		<deroute block="learn_loop"/>
 	</block>
-	<block name="run_lines">
-		<for var="i" from="1" to="3">
-			<call fun="RunLinesWP(WP_p1,WP_p2,_var_i)"/>
-			<go from="p2" wp="p1" hmode="route"/>
-			<!--stay wp="p1" until="stage_time > 1"/-->
-			<go from="p1" wp="p2" hmode="route"/>   
-		</for>     
-		<deroute block="run_lines"/>
-    </block>
-	    <block name="line_p1_p2">
-      <go from="p1" hmode="route" wp="p2"/>
-      <stay wp="p2" until="stage_time>10"/>
-      <go from="p2" hmode="route" wp="p1"/>
-      <deroute block="stay_p1"/>
-    </block>
     <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
       <call fun="NavSetWaypointHere(WP_TD)"/>
     </block>
