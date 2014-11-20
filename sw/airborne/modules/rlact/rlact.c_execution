@@ -30,18 +30,19 @@
 #include "messages.h"
 #include "mcu_periph/uart.h"
 #include "subsystems/datalink/downlink.h"
-#include "generated/flight_plan.h"  //needed to use WP_p00
+#include "generated/flight_plan.h"  //needed to use WP_HOME
 
-void send_rlact(void) {
-  DOWNLINK_SEND_RLACT(DefaultChannel, DefaultDevice,
-                                            &xnew);
-}
+//void send_rlact(void) {
+//  DOWNLINK_SEND_RLACT(DefaultChannel, DefaultDevice,
+//                                            &xnew);
+//}
 
 
 //*************** DECLARE VARIABLES *****************//
 int32_t xnew; //declare variable
 
 // environment and states for RL algorithm
+/*
 int8_t drow, dcol;
 int16_t state_curr = 0;
 int16_t state_next = 0;
@@ -67,25 +68,29 @@ int8_t hbflag;      //hitbounds flag
   // with ka declared as 'static int', same thing.  GCS and server processes can be stopped, but stopping the simulator process, will cause the ka variable to be reinitialized.  
 
 // Storing value function:  Value function, V, is stored in V[36][6] for algorithm purposes.  But each iteration the value function and kv matrices will be written to a file so as to be saved and not as easily rewritten.
-    static FILE* kv_store;
-    FILE *file_Vfcn, *file_kv;
-    FILE *file_reg, *file_regw, *file_actw, *file_act;
+    //static FILE* kv_store;
+//    FILE *file_Vfcn, *file_kv;
+//    FILE *file_reg, *file_regw, *file_actw, *file_act;
     int16_t i, j, k;
-    
+    */
 // for execution of RL in paparazzi
-const int del = 80;// distance to move in each action (bits)
-static int16_t pass = 0;
+const int del = 256;// distance to move in each action
+//static int16_t pass = 0;
 
 // policy decisions - just random for now
-int16_t eps = 0;  // eps contains information on policy from random(eps = 0) to full greedy(eps=100).  If eps is between 1 and 99, it is ep_greedy.
-const int8_t nact = 8; //number of actions = 4 (NESW)
+//int16_t eps = 0;  // eps contains information on policy from random(eps = 0) to full greedy(eps=100).  If eps is between 1 and 99, it is ep_greedy.
+//const int8_t nact = 8; //number of actions = 4 (NESW)
 uint8_t act;
 
 
 //*********************** FUNCTIONS ***********************//
 void rlact_init(void) {
+
+printf("init1\n");
 	xnew = 5; //initialize it
+printf("init2\n");
 	srand(time(NULL));
+printf("init3\n");
   //  const int nact = 4; //number of actions = 4 (NESW)
 
 }
@@ -93,6 +98,8 @@ void rlact_init(void) {
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
 bool_t rlact_run(uint8_t wpa, uint8_t wpb){
 
+ printf("started\n");
+/*
 pass++;
 
 // first pass?  choose initial state randomly, and move wpb wrt home
@@ -102,29 +109,30 @@ if(pass==1){
 	state_curr = rand() % nstates; //Random state between 0-35;
 	drow = state_curr % ndim; // remainder = #increments to move in y from home
 	dcol = (int)state_curr/ndim;  // rounded down = #increments to move in x from home
-	waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
-	waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
+	waypoints[wpb].x = waypoints[WP_HOME].x + dcol*del;
+	waypoints[wpb].y = waypoints[WP_HOME].y + drow*del;
 	
 	// Just in case file has left over numbers from last time, clear file
-	file_actw = fopen("./sw/airborne/modules/rlact/actions_rand.txt","w");
-	fclose(file_actw);
-	file_regw = fopen("./sw/airborne/modules/rlact/regen_rand.txt","w");
-	fclose(file_regw);
+//	file_actw = fopen("./sw/airborne/modules/rlact/actions_rand.txt","w");
+//	fclose(file_actw);
+//	file_regw = fopen("./sw/airborne/modules/rlact/regen_rand.txt","w");
+//	fclose(file_regw);
 	
 	//reopen regeneration file and save the first random generation state
-	file_reg = fopen("./sw/airborne/modules/rlact/regen_rand.txt","a");
-	fprintf(file_reg,"%d ", state_curr);
-	fclose(file_reg);
+//	file_reg = fopen("./sw/airborne/modules/rlact/regen_rand.txt","a");
+//	fprintf(file_reg,"%d ", state_curr);
+//	fclose(file_reg);
 }
-else{
+else{ */
 	//choose initial action and print to appendable file
-	act = chooseact(state_curr, ns_curr, nact, eps);
-	file_act = fopen("./sw/airborne/modules/rlact/actions_rand.txt","a");
-	fprintf(file_act,"%d ", act);
+//	act = chooseact(state_curr, ns_curr, nact, eps);
+	act = (rand() % 8)+1;
+//	file_act = fopen("./sw/airborne/modules/rlact/actions_rand.txt","a");
+//	fprintf(file_act,"%d ", act);
 	
-	file_reg = fopen("./sw/airborne/modules/rlact/regen_rand.txt","a");
+//	file_reg = fopen("./sw/airborne/modules/rlact/regen_rand.txt","a");
 
-	// give rewards for current state and calculate next state
+/*	// give rewards for current state and calculate next state
 	switch(state_curr){
 	case 2 :  case 22 : case 30 : // flowers  (code done for random policy)
 		reward = 8.0;
@@ -141,7 +149,7 @@ else{
 			while(hbflag){
 				reward = reward - 1.0;
 				act = chooseact(state_curr, ns_curr, nact, eps);
-				fprintf(file_act,"%d ", act);
+//				fprintf(file_act,"%d ", act);
 				hbflag =  hitsbounds(state_curr, act);
 			}
 			
@@ -162,7 +170,7 @@ else{
 		  }
 		  else {  //if ep-greedy (eps>0)
 		  	state_next = rand() % nstates; 
-		  	fprintf(file_reg,"%d ", state_next);
+//		  	fprintf(file_reg,"%d ", state_next);
 		  }
 		break;
 		
@@ -171,7 +179,7 @@ else{
 		// reset at nectar state 0, and a random grid location.
 		ns_next = 0;
 		state_next = rand() % nstates;
-		fprintf(file_reg,"%d ", state_next);
+//		fprintf(file_reg,"%d ", state_next);
 		act = 9; //special hive implementation for random regeneration
 		break;
 		
@@ -199,21 +207,21 @@ else{
 			}
 		}
     } // switch statement - reward function
-    
+    */
 /* Now with reward and next state calculated:
    1) update value function for current state using belman eqn
    2) take action in paparazzi sim/IRL
    3) reset "next state" to "current state" for next iteration */
-
+/*
     // update Value function
-    printf("At grid spot %d, nectar state %d. visited %d times\n",state_curr,ns_curr,kv[state_curr][ns_curr]);
+    //printf("At grid spot %d, nectar state %d. visited %d times\n",state_curr,ns_curr,kv[state_curr][ns_curr]);
     V_old = V[state_curr][ns_curr];
      ++kv[state_curr][ns_curr];   
      alphav = 1.0/(double)kv[state_curr][ns_curr];
     V[state_curr][ns_curr] = V_old + alphav*(reward + belgam* V[state_next][ns_next] - V_old);
-printf("alphav = %.4f,  old V = %.4f, new V = %.4f \n", alphav, V_old, V[state_curr][ns_curr]);
-
-// update value function file
+//printf("alphav = %.4f,  old V = %.4f, new V = %.4f \n", alphav, V_old, V[state_curr][ns_curr]);
+*/
+/*/ update value function file
 if(pass==11 || pass==101 || pass==201 || pass==251 || pass==1001 || pass==5001){
 switch(pass){
 	case 11: file_Vfcn = fopen("./sw/airborne/modules/rlact/Vfcn10.txt","w");
@@ -246,7 +254,7 @@ switch(pass){
     } //end security check
         fclose(file_Vfcn);
         fclose(file_kv);
-   } //end update value function 
+   } //end update value function */
     
     	//execute in paparazzi sim/IRL
 	switch (act){
@@ -257,54 +265,54 @@ switch(pass){
 		case 1: /* north */
 		waypoints[wpb].x = waypoints[wpa].x;    
 		waypoints[wpb].y = waypoints[wpa].y + del;
-		++ka[0];
+//		++ka[0];
 		break;
 		case 2: /* east */
 		waypoints[wpb].x = waypoints[wpa].x + del;
 		waypoints[wpb].y = waypoints[wpa].y;
-		++ka[1];
+//		++ka[1];
 		break;
 		case 3: /* south */
 		waypoints[wpb].x = waypoints[wpa].x;
 		waypoints[wpb].y = waypoints[wpa].y - del;
-		++ka[2];
+//		++ka[2];
 		break;      
 		case 4: /* west */
 		waypoints[wpb].x = waypoints[wpa].x - del;
 		waypoints[wpb].y = waypoints[wpa].y;
-		++ka[3];
+//		++ka[3];
 		break;    
 		case 5: /* northwest */
 		waypoints[wpb].x = waypoints[wpa].x - del;    
 		waypoints[wpb].y = waypoints[wpa].y + del;
-		++ka[4];
+//		++ka[4];
 		break;
 		case 6: /* northeast */
 		waypoints[wpb].x = waypoints[wpa].x + del;
 		waypoints[wpb].y = waypoints[wpa].y + del;
-		++ka[5];
+//		++ka[5];
 		break;
 		case 7: /* southeast */
 		waypoints[wpb].x = waypoints[wpa].x + del;
 		waypoints[wpb].y = waypoints[wpa].y - del;
-		++ka[6];
+//		++ka[6];
 		break;      
 		case 8: /* southwest */
 		waypoints[wpb].x = waypoints[wpa].x - del;
 		waypoints[wpb].y = waypoints[wpa].y - del;
-		++ka[7];
+//		++ka[7];
 		break;
-		case 9:  /* special hive random regeneration */
-		drow = state_next % ndim; // remainder = #increments to move in y from home
+//		case 9:  /* special hive random regeneration */
+/*		drow = state_next % ndim; // remainder = #increments to move in y from home
 		dcol = (int)state_next/ndim;  // rounded down = #increments to move in x from home
-		waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
-		waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
-		break;
+		waypoints[wpb].x = waypoints[WP_HOME].x + dcol*del;
+		waypoints[wpb].y = waypoints[WP_HOME].y + drow*del;
+		break;*/
 		default: /* no movement */
 	    waypoints[wpb].x = waypoints[wpa].x;
 		waypoints[wpb].y = waypoints[wpa].y;
-		state_next = state_curr; ns_next = ns_curr;
-		printf("default action stay still: no valid action taken\n");
+//		state_next = state_curr; ns_next = ns_curr;
+		//printf("Error: no valid action taken\n");
 		break;
 	}
 	
@@ -313,19 +321,22 @@ switch(pass){
   state_curr = state_next;
   ns_curr = ns_next;	
   
-  //close all open files
+  /*/close all open files
   fclose(file_act);
-  fclose(file_reg);
+  fclose(file_reg);*/
 
 } //if not first pass
 
 		return FALSE;
 }  // end of rlact_run function
 
+void rlact_periodic(void) {
+}
 
 /********************* hitsbounds subfunction *************/
 /*** determines if boundary is hit within a 6x6 grid environment */
 /*** inputs: current state, action *** output: 1/0 integer */
+/*
 int8_t hitsbounds(uint16_t state_curr, uint8_t act){
     drow = state_curr % 6; //= #increments current state is from home in y
 	dcol = (int)state_curr/6;  //= #increments current state is from home in x
@@ -352,11 +363,12 @@ int8_t hitsbounds(uint16_t state_curr, uint8_t act){
     if(sol==1){return 1;}
     else{return 0;}
 }
-
+*/
 /********************* chooseact subfunction *************/
 /*** chooses an action between 1-8 to take.  */
 /*** input: Value function, policy, current state, nectar state*/
 /*** output: action 1-8 (North, east, south, west, NW, NE, SE, SW) */
+/*
 int8_t chooseact(uint16_t state_curr, uint8_t ns_curr ,uint8_t nact, uint16_t eps){
 int8_t a,i,act;
 int8_t index[8]={-1};
@@ -409,4 +421,4 @@ act = index[a];
 return act;
 
 }  // end chooseact subfuction
-
+*/

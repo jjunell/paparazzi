@@ -5,14 +5,14 @@
 #include "autopilot.h"
   </header>
   <waypoints>
-    <waypoint name="HOME" x="0.0" y="0.0" height="2.0"/>
-    <waypoint name="CLIMB" x="0.0" y="0.0" height="2.0"/>
-    <waypoint name="STDBY" x="0.0" y="0.0" height="2.0"/>
-    <waypoint name="_p3" x="5.0" y="3.0" height="2.0"/>
+    <waypoint name="HOME" x="0.0" y="0.0" height="3.0"/>
+    <waypoint name="CLIMB" x="0.0" y="0.0" height="3.0"/>
+    <waypoint name="STDBY" x="0.0" y="0.0" height="3.0"/>
+    <waypoint name="_p3" x="5.0" y="3.0" height="3.0"/>
     <waypoint name="TD" x="2.0" y="0.0"/>
-    <waypoint name="p1" lat="51.9906266" lon="4.376766" height="2.0"/>
-    <waypoint name="p2" lat="51.9906266" lon="4.376766" height="2.0"/>
-    <waypoint name="p00" lat="51.990629" lon="4.376760" height="2.0"/>
+    <waypoint name="p1" lat="51.9906266" lon="4.376766" height="3.0"/>
+    <waypoint name="p2" lat="51.9906266" lon="4.376766" height="3.0"/>
+    <waypoint name="p00" lat="51.990629" lon="4.376760" height="3.0"/>
     <waypoint lat="51.990643" lon="4.376830" name="FA1"/>
     <waypoint lat="51.990614" lon="4.376761" name="FA2"/>
     <waypoint lat="51.990643" lon="4.376739" name="FA3"/>
@@ -26,6 +26,12 @@
       <corner name="FA1"/>
     </sector>
   </sectors>
+<!-- Security exceptions -->
+  <exceptions>
+    <!--exception cond="! InsideFlight_Area(GetPosX(), GetPosY())" deroute="land here"/-->
+    <!--exception cond="GetPosAlt()>5" deroute="land here"/-->
+    <!--exception cond="!GpsFixValid()" deroute="land here"/-->
+  </exceptions>
   <blocks>
     <block name="Wait GPS">
       <call fun="NavKillThrottle()"/>
@@ -35,6 +41,8 @@
       <while cond="LessThan(NavBlockTime(), 10)"/>
       <!--call fun="NavSetGroundReferenceHere()"/--> 
       <call fun="NavSetWaypointHere(WP_HOME)"/>
+      <call fun="NavSetWaypointHere(WP_p1)"/>
+      <call fun="NavSetWaypointHere(WP_p2)"/>
       <call fun="NavSetWaypointHere(WP_CLIMB)"/>
       <call fun="NavSetWaypointHere(WP_STDBY)"/>
       <call fun="NavSetWaypointHere(WP_TD)"/>
@@ -57,41 +65,59 @@
       <stay wp="STDBY"/>
     </block>
      <block name="stay_p00">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
       <stay wp="p00"/>
     </block>
     <block name="stay_p1">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
       <stay wp="p1"/>
     </block>
 	<block name="stay_p2">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
 		<stay wp="p2"/>
 	</block>
 	<block name="increment_p2x">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
 		<call fun="IncrementWaypointx(WP_p2)"/>
 		<deroute block="stay_p1"/>
 	</block>
 	<block name="increment_p1x">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
         <call fun="IncrementWaypointx(WP_p1)"/>
 		<deroute block="stay_p2"/>
 	</block>
 	<block name="increment_p2y">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
 		<call fun="IncrementWaypointy(WP_p2)"/>
 		<deroute block="stay_p1"/>
     </block>
 	<block name="increment_p1y">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
 		<call fun="IncrementWaypointy(WP_p1)"/>
 		<deroute block="stay_p2"/>
     </block>
-	<block name="learn">
+	<block name="learn_2acts">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
 			<call fun="rlact_run(WP_p1,WP_p2)"/>
 			<go from="p1" wp="p2" hmode="route"/>   
 			<call fun="rlact_run(WP_p2,WP_p1)"/>
 			<go from="p2" wp="p1" hmode="route"/>
-		<deroute block="deroute2learn"/>
+		<deroute block="stay_p1"/>
 	</block>
 	<block name="deroute2learn">
-		<deroute block="learn"/>
+		<deroute block="learn_2acts"/>
     </block>	
 	<block name="learn_loop">
+    <exception cond="!GpsFixValid()" deroute="land here"/>
+    <exception cond="GetPosAlt()>5" deroute="land here"/>
 			<call fun="rlact_run(WP_p1,WP_p2)"/>
 			<go from="p1" wp="p2" hmode="route"/>   
 			<call fun="rlact_run(WP_p2,WP_p1)"/>

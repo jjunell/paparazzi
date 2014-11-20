@@ -228,7 +228,7 @@
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
-    <define name="ARRIVED_AT_WAYPOINT" value="0.2"/>
+    <define name="ARRIVED_AT_WAYPOINT" value="0.1"/>
   </section>
 
   <section name="BAT">

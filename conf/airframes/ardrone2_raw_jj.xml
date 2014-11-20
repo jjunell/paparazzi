@@ -203,7 +203,7 @@
     <define name="PGAIN" value="79"/>
     <define name="DGAIN" value="100"/>
     <define name="IGAIN" value="30"/>
-    <define name="REF_MAX_SPEED" value="0.4"/>
+    <define name="REF_MAX_SPEED" value="0.5"/>
   </section>
 
   <section name="SIMULATOR" prefix="NPS_">
@@ -219,7 +219,7 @@
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
 
-    <define name="ARRIVED_AT_WAYPOINT" value="0.2"/>
+    <define name="ARRIVED_AT_WAYPOINT" value="0.1"/>
   </section>
 
   <section name="BAT">

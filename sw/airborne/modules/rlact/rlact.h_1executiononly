@@ -36,8 +36,8 @@
 //******* FUNCTIONS ********//
 void rlact_init(void);
 extern bool_t rlact_run(uint8_t wpa, uint8_t wpb);
-int8_t hitsbounds(uint16_t state_curr, uint8_t act);
-int8_t chooseact(uint16_t state_curr, uint8_t ns_curr, uint16_t eps);
+//int8_t hitsbounds(uint16_t state_curr, uint8_t act);
+//int8_t chooseact(uint16_t state_curr, uint8_t ns_curr ,uint8_t nact, uint16_t eps);
 //void rlact_periodic(void);
 //extern void send_rlact(void);
 

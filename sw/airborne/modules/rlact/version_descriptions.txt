@@ -1,0 +1,23 @@
+simonly - Use this version for a full rlact capability but only in sim.  It doesn't work in real life for some reason that I'm debugging now.
+
+Start from simpler functions:
+1) executiononly - the base code for executing an action.  The action is a constant.
+
+2) passEqAction - pass is incremented and action is = to pass, it will therefore step through actions 1 through 8 and execute those, and then when pass>8, the switch statement will go to default and the executed action will be to stay still.
+
+3) loopact - action loops through 1-8.  starts in state 14, then proceeds to loop through actions, starting with act = 2,3,4,5,6,7,8,1.  So it is basically making a square and then a diamond.  It also keeps track of current and next state.  * at this point is it using most all the integers.
+
+4) wDoubles - first add matrix in declaration only, then started using in calculations.  Doubles work.  Then made the logic structure pretty much the same as in the full sim version.  Action selection is still looping through 1-8, and in this way it should never go out of bounds, so the out of bounds flag was always set to zero.  The subfunctions were never used and random numbers never called.
+
+5) hitsbounds - added hitsbounds subfunction.  tested such that initial state was 8.  first 2 actions is to go south to 7and west to 1.  The next NW action will hit the boundary stay where it is, and then continue the loop in safe states.  after several iterations in simulation a tiny bit more memory was used but it can't be for sure that it was because of the subfunction.
+
+
+6) randact - added random action selection.  It can randomly move around hitting boundaries but staying within them.  Updates Vfcn.  stays in nectar state = 0;
+
+A) wFILE_fail - adds the FILE declaration and tries to open and append a file, but it doesn't compile in ap mode.
+
+7) allsubfunctions - add the other subfunction, choose act.
+ - also changed a few things in chooseact subfunctions 1) moved as many variable declarations to top of file.  2) fixed bug which didn't consider base 0 for action sequence.  Vact[0] = action 1, etc. 
+ 
+test1 - completely set up for test1.  writes data to usb drive on ardrone.  Need to specify in file which path (ardrone or simulation) to send files.  Also, specify which passes you want to save.  Now it is set to save Vfcn files at pass= 10,100,150,200,250,300,1000.
+
