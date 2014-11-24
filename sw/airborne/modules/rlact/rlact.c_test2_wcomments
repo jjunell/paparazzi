@@ -35,8 +35,8 @@
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #ifndef FILE_RLACT_PATH
-#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
-//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
+//#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
+#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
 #endif
 
 //*************** DECLARE VARIABLES *****************//
@@ -55,7 +55,7 @@ int8_t hbflag;      //hitbounds flag
 // Bellman equation
     double V_old, alphav;
     const double belgam = 0.9;  // gamma for belman equation
-    static double V[36][6]= {{0}}; // Value function initialized to zeros
+    static double V[36][6]={{0}}; // Value function initialized to zeros
     static int kv[36][6]= {{0}}; // number of times a state has been visited
     static int ka[8]= {0};  //number of times an action has been taken, initialized as 0
   // with ka declared as 'int', as long as the GCS is not stopped, the value will not reinitialize
@@ -143,6 +143,7 @@ printf("init4\n");
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
 bool_t rlact_run(uint8_t wpa, uint8_t wpb){
 pass++;
+// printf("pass = %d\n",pass);
 
 // first pass?  choose initial state randomly, and move wpb wrt p00
 if(pass==1){
@@ -161,13 +162,15 @@ if(pass==1){
 }
 else{
 	//choose initial action and print to appendable file
+//	printf("start else statement for pass>1\n");
 	act = chooseact(state_curr, ns_curr, eps);
+//	printf("initial action choosen: %d\n", act);
 	file_act = fopen(filename_act,"a");
 	fprintf(file_act,"%d ", act);
 
 	file_reg = fopen(filename_regen,"a");
 
-	//printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
+	printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
 	
 	// give rewards for current state and calculate next state
 	switch(state_curr){
@@ -405,13 +408,18 @@ if(eps==0){ //random
 	act_sf2 = (rand() % nact) + 1; 
 }
 else{ //ep_greedy or full greedy depending on eps value
-	if(eps_sf2<(rand() % 100)){act_sf2 = (rand() % nact) +1;}
+//printf("inside chooseact 2b\n");
+	if(eps_sf2<(rand() % 100)){act_sf2 = (rand() % nact) +1;
+//printf("inside chooseact 3a\n");
+	}
 	else{
+//printf("inside chooseact 3b, hitbound actions: [ ");
 			//for each action fill in goodness value or NaN
 		for(a= 1; a < nact+1; a++){
   			hbflag = hitsbounds(state_curr_sf2, a);
 			if(hbflag){
 				Vact[(a-1)] = 0.0/0.0; //if hits bounds, not an option for movement
+				//printf("%d ",a);
 				}
 			else{
 				switch(a){
@@ -428,17 +436,20 @@ else{ //ep_greedy or full greedy depending on eps value
 		} //for each action
 
 //find max value of Vact
-max = Vact[0];
+max = Vact[0]; //printf("Vact = [ %f ",Vact[0]);
+
 for(a=1; a <nact; a++){
 	if(isnan(max)){max = Vact[a]; /*printf("\nmax is nan, new max= %f\n",max);*/}
 	else if(Vact[a]>max){ max=Vact[a]; }
+	//printf("%f ",Vact[a]);
 }
-
+		//printf("]\ninside chooseact 5: max= %f\n", max);
 //find all the elements that have max value
 i=0;
 for(a=0; a<nact; a++){
 	if(Vact[a]==max){index_sf2[i] = a; i++; }
 }
+		//printf("inside chooseact 6; i = %d\n", i);
 //there are i elements with the same max value.  Choose randomly between them
 a = rand() % i;
 act_sf2 = index_sf2[a] + 1;

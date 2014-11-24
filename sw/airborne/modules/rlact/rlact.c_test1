@@ -136,11 +136,12 @@ if(pass==1){
 	dcol = (int)state_curr/ndim;  // rounded down = #increments to move in x from home
 	waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
 	waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
-		
+	
 	//reopen regeneration file and save the first random generation state
 	file_reg = fopen(filename_regen,"a");
 	fprintf(file_reg,"%d ", state_curr);
 	fclose(file_reg);
+
 }
 else{
 	//choose initial action and print to appendable file
@@ -189,8 +190,9 @@ else{
 			}
 		  }
 		  else {  //if ep-greedy (eps>0)
-		  	state_next = rand() % nstates; 
+		  	state_next = rand() % nstates;
 		  	fprintf(file_reg,"%d ", state_next);
+		  	act = 9; // special regen implementation for flowers during e-greedy
 		  }
 		break;
 		
@@ -313,7 +315,7 @@ if(pass==11 || pass==101 || pass==151 || pass==201 || pass==251 || pass==301 || 
 		waypoints[wpb].y = waypoints[wpa].y - del;
 		++ka[7];
 		break;
-		case 9:  /* special hive random regeneration */
+		case 9:  /* special hive/flower random regeneration */
 		drow = state_next % ndim; // remainder = #increments to move in y from home
 		dcol = (int)state_next/ndim;  // rounded down = #increments to move in x from home
 		waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
@@ -383,7 +385,6 @@ int8_t chooseact(uint16_t state_curr_sf2, uint8_t ns_curr_sf2 , uint16_t eps_sf2
 // question: why don't I have to bring in V[36][6], or nact, or ndim?
 int8_t index_sf2[8]={-1};  //for some reason I cannot declare this above.
 
-
 //initialize
 a = 0;
 
@@ -397,8 +398,8 @@ else{ //ep_greedy or full greedy depending on eps value
 		for(a= 1; a < nact+1; a++){
   			hbflag = hitsbounds(state_curr_sf2, a);
 			if(hbflag){
-				Vact[a] = 0.0/0.0; //if hits bounds, not an option for movement
-				} 
+				Vact[(a-1)] = 0.0/0.0; //if hits bounds, not an option for movement
+				}
 			else{
 				switch(a){
 				case 1 : Vact[0] = V[state_curr_sf2+1][ns_curr_sf2]; break;			//north
@@ -416,8 +417,10 @@ else{ //ep_greedy or full greedy depending on eps value
 //find max value of Vact
 max = Vact[0];
 for(a=1; a <nact; a++){
-	if(Vact[a]>max){ max=Vact[a]; }
+	if(isnan(max)){max = Vact[a]; /*printf("\nmax is nan, new max= %f\n",max);*/}
+	else if(Vact[a]>max){ max=Vact[a]; }
 }
+
 //find all the elements that have max value
 i=0;
 for(a=0; a<nact; a++){

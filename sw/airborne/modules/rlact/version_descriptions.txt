@@ -19,5 +19,10 @@ A) wFILE_fail - adds the FILE declaration and tries to open and append a file, b
 7) allsubfunctions - add the other subfunction, choose act.
  - also changed a few things in chooseact subfunctions 1) moved as many variable declarations to top of file.  2) fixed bug which didn't consider base 0 for action sequence.  Vact[0] = action 1, etc. 
  
-test1 - completely set up for test1.  writes data to usb drive on ardrone.  Need to specify in file which path (ardrone or simulation) to send files.  Also, specify which passes you want to save.  Now it is set to save Vfcn files at pass= 10,100,150,200,250,300,1000.
+test1 - completely set up for test1.  writes data to usb drive on ardrone.  Need to specify in file which path (ardrone or simulation) to send files.  Also, specify which passes you want to save.  Now it is set to save Vfcn files at pass= 10,100,150,200,250,300,1000.  epsilon = 0 (fully random policy).
+ updated:  chooseaction subfunction bug fixes.  I didn't notice them during test1 because every action was random, but with test2 I found the bugs and updated the test1 file accordingly.
+ 
+ test2 - reads a file within the path folder called "Vin.txt".  Uses this Value function as an initial value function.  Epsilon set as 100 (fully greedy).  Bug fixes to chooseaction subfunction.
+ 
+ 
 

@@ -143,6 +143,7 @@ printf("init4\n");
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
 bool_t rlact_run(uint8_t wpa, uint8_t wpb){
 pass++;
+// printf("pass = %d\n",pass);
 
 // first pass?  choose initial state randomly, and move wpb wrt p00
 if(pass==1){
@@ -167,7 +168,7 @@ else{
 
 	file_reg = fopen(filename_regen,"a");
 
-	//printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
+	printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
 	
 	// give rewards for current state and calculate next state
 	switch(state_curr){

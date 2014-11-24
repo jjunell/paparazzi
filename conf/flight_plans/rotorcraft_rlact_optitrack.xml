@@ -102,7 +102,7 @@
     <exception cond="GetPosAlt()>5" deroute="land here"/>
 		<call fun="IncrementWaypointy(WP_p1)"/>
 		<deroute block="stay_p2"/>
-    </block>
+	</block>
 	<block name="learn_2acts">
     <exception cond="!GpsFixValid()" deroute="land here"/>
     <exception cond="GetPosAlt()>5" deroute="land here"/>

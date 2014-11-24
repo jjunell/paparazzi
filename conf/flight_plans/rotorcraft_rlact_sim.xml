@@ -57,22 +57,6 @@
     <exception cond="GetPosAlt()>5" deroute="land here"/>
 		<stay wp="p2"/>
 	</block>
-	<block name="increment_p2x">
-		<call fun="IncrementWaypointx(WP_p2)"/>
-		<deroute block="stay_p1"/>
-	</block>
-	<block name="increment_p1x">
-        <call fun="IncrementWaypointx(WP_p1)"/>
-		<deroute block="stay_p2"/>
-	</block>
-	<block name="increment_p2y">
-		<call fun="IncrementWaypointy(WP_p2)"/>
-		<deroute block="stay_p1"/>
-    </block>
-	<block name="increment_p1y">
-		<call fun="IncrementWaypointy(WP_p1)"/>
-		<deroute block="stay_p2"/>
-    </block>
 	<block name="learn_2acts">
     	<exception cond="GetPosAlt()>5" deroute="land here"/>
 			<call fun="rlact_run(WP_p1,WP_p2)"/>
