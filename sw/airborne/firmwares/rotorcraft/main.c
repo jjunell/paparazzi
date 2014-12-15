@@ -34,6 +34,7 @@
 #include "mcu.h"
 #include "mcu_periph/sys_time.h"
 #include "mcu_periph/i2c.h"
+#include "mcu_periph/uart.h"
 #if USE_UDP
 #include "mcu_periph/udp.h"
 #endif
@@ -81,6 +82,10 @@ PRINT_CONFIG_MSG_VALUE("USE_BARO_BOARD is TRUE, reading onboard baro: ", BARO_BO
 
 #include "generated/modules.h"
 #include "subsystems/abi.h"
+
+#if USE_USB_SERIAL
+#include "mcu_periph/usb_serial.h"
+#endif
 
 
 /* if PRINT_CONFIG is defined, print some config options */
@@ -171,7 +176,9 @@ STATIC_INLINE void main_init( void ) {
 
   mcu_int_enable();
 
+#if DOWNLINK
   downlink_init();
+#endif
 
   // register the timers for the periodic functions
   main_periodic_tid = sys_time_register_timer((1./PERIODIC_FREQUENCY), NULL);
@@ -215,14 +222,20 @@ STATIC_INLINE void main_periodic( void ) {
   SetActuatorsFromCommands(commands, autopilot_mode);
 
   if (autopilot_in_flight) {
-    RunOnceEvery(PERIODIC_FREQUENCY, { autopilot_flight_time++; datalink_time++; });
+    RunOnceEvery(PERIODIC_FREQUENCY, { autopilot_flight_time++;
+#if defined DATALINK || defined SITL
+        datalink_time++;
+#endif
+        });
   }
 
   RunOnceEvery(10, LED_PERIODIC());
 }
 
 STATIC_INLINE void telemetry_periodic(void) {
+#if PERIODIC_TELEMETRY
   periodic_telemetry_send_Main(&(DefaultChannel).trans_tx, &(DefaultDevice).device);
+#endif
 }
 
 /** mode to enter when RC is lost while using a mode with RC input (not AP_MODE_NAV) */
@@ -274,8 +287,16 @@ STATIC_INLINE void main_event( void ) {
 
   i2c_event();
 
+#ifndef SITL
+  uart_event();
+#endif
+
 #if USE_UDP
   udp_event();
+#endif
+
+#if USE_USB_SERIAL
+  VCOM_event();
 #endif
 
   DatalinkEvent();

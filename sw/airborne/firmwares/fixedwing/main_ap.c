@@ -241,7 +241,9 @@ void init_ap( void ) {
   /** - start interrupt task */
   mcu_int_enable();
 
+#if DOWNLINK
   downlink_init();
+#endif
 
 #if defined AEROCOMM_DATA_PIN
   IO0DIR |= _BV(AEROCOMM_DATA_PIN);
@@ -449,7 +451,9 @@ void reporting_task( void ) {
   /** then report periodicly */
   else {
     //PeriodicSendAp(DefaultChannel, DefaultDevice);
+#if PERIODIC_TELEMETRY
     periodic_telemetry_send_Ap(&(DefaultChannel).trans_tx, &(DefaultDevice).device);
+#endif
   }
 }
 
@@ -652,6 +656,12 @@ void event_task_ap( void ) {
 #if USE_I2C0 || USE_I2C1 || USE_I2C2 || USE_I2C3
   i2c_event();
 #endif
+
+  uart_event();
+#endif
+
+#if USE_USB_SERIAL
+  VCOM_event();
 #endif
 
 #if USE_AHRS && USE_IMU
