@@ -109,6 +109,7 @@ extern bool_t nav_set_heading_current(void);
 
 #define NavSetWaypointHere(_wp) ({ VECT2_COPY(waypoints[_wp], *stateGetPositionEnu_i()); FALSE; })
 #define NavCopyWaypoint(_wp1, _wp2) ({ VECT2_COPY(waypoints[_wp1], waypoints[_wp2]); FALSE; })
+/** Jaimes code */
 
 #define WaypointX(_wp)    POS_FLOAT_OF_BFP(waypoints[_wp].x)
 #define WaypointY(_wp)    POS_FLOAT_OF_BFP(waypoints[_wp].y)

@@ -1293,10 +1293,15 @@
     <field name="flight_time"   type="uint16" unit="s"/>
   </message>
 
+<<<<<<< HEAD
   <message name="TEMP_ADC" id="148">
     <field name="temp1"   type="float" unit="deg_celsius" format="%.2f"/>
     <field name="temp2"   type="float" unit="deg_celsius" format="%.2f"/>
     <field name="temp3"   type="float" unit="deg_celsius" format="%.2f"/>
+=======
+    <message name="RLACT" id="148">
+    <field name="xnew"    type="int32"/>
+>>>>>>> rlact_cap
   </message>
 
   <message name="GUIDANCE_H_REF_INT" id="149">
