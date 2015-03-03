@@ -35,8 +35,8 @@
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #ifndef FILE_RLACT_PATH
-#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
-//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
+//#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
+#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
 #endif
 
 //*************** DECLARE VARIABLES *****************//
