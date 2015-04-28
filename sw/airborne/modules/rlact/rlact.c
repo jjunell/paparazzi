@@ -72,10 +72,6 @@ int8_t hbflag;      //hitbounds flag
     char filename_Vfcn[200];
 	char filename_kv[200];
 	
-// reading in value function file
-	FILE *file_Vin;
-	char filename_Vin[200];
-	
 // for execution of RL in paparazzi
 const int16_t del = 80;// distance to move in each action
 static int32_t pass;
@@ -110,7 +106,7 @@ printf("init1\n");
 	
 	act= 0; 
 	pass=0;
-	eps=100;  //between 0-100
+	eps=0;
 
 printf("init2\n");
 	srand(time(NULL)); //initialize random number generator just once
@@ -125,24 +121,12 @@ printf("init3\n");
 	file_regw = fopen(filename_regen,"w");
 	fclose(file_regw);
 
-printf("init4\n");
-	//initialize V to the values from given file.
-	sprintf(filename_Vin, "%sVin.txt", FILE_RLACT_PATH);
-	file_Vin = fopen(filename_Vin,"r");
-	    if(file_Vin==NULL){printf("Error! 'Vin.txt' NULL. No Value Function updates written to file.\n");}
-    else{
-    for(i=0;i<ndim;i++){
-    	for(j=0;j<nstates;j++){ 
-    	(void)fscanf(file_Vin, "%lf", &V[j][i]);
-    	}}// end loops to read in Vin
-    } //end security check
-    fclose(file_Vin);
-    printf("init5\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
 bool_t rlact_run(uint8_t wpa, uint8_t wpb){
 pass++;
+// printf("pass = %d\n",pass);
 
 // first pass?  choose initial state randomly, and move wpb wrt p00
 if(pass==1){
@@ -167,7 +151,7 @@ else{
 
 	file_reg = fopen(filename_regen,"a");
 
-	//printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
+	printf("state = %d, visit# %d, Vold= %.4f, ",state_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
 	
 	// give rewards for current state and calculate next state
 	switch(state_curr){
@@ -245,6 +229,9 @@ else{
 			}
 		}
     } // switch statement - reward function
+    
+    //override stay in same nectar state:
+    ns_curr=0; ns_next=0;
     
 /* Now with reward and next state calculated:
    1) update value function for current state using belman eqn
