@@ -127,13 +127,13 @@ void pbn_read_event(void)
       // IIR filter to compute an initial offset
 #ifndef PBN_AIRSPEED_OFFSET
       pbn.airspeed_offset = (PBN_OFFSET_FILTER * pbn.airspeed_offset + pbn.airspeed_adc) /
-        (PBN_OFFSET_FILTER + 1);
+                            (PBN_OFFSET_FILTER + 1);
 #else
       pbn.airspeed_offset = PBN_AIRSPEED_OFFSET;
 #endif
 #ifndef PBN_ALTITUDE_OFFSET
       pbn.altitude_offset = (PBN_OFFSET_FILTER * pbn.altitude_offset + pbn.altitude_adc) /
-        (PBN_OFFSET_FILTER + 1);
+                            (PBN_OFFSET_FILTER + 1);
 #else
       pbn.altitude_offset = PBN_ALTITUDE_OFFSET;
 #endif
@@ -143,13 +143,13 @@ void pbn_read_event(void)
     } else {
       // Compute pressure
       float pressure = PBN_ALTITUDE_SCALE * (float) pbn.altitude_adc + PBN_PRESSURE_OFFSET;
-      AbiSendMsgBARO_ABS(BARO_PBN_SENDER_ID, &pressure);
+      AbiSendMsgBARO_ABS(BARO_PBN_SENDER_ID, pressure);
       // Compute airspeed and altitude
       //pbn_airspeed = (-4.45 + sqrtf(19.84-0.57*(float)(airspeed_offset-airspeed_adc)))/0.28;
       uint16_t diff = Max(pbn.airspeed_adc - pbn.airspeed_offset, 0);
       float tmp_airspeed = sqrtf((float)diff * PBN_AIRSPEED_SCALE);
       pbn.airspeed = (pbn.airspeed_filter * pbn.airspeed + tmp_airspeed) /
-        (pbn.airspeed_filter + 1.);
+                     (pbn.airspeed_filter + 1.);
 #if USE_AIRSPEED_PBN
       stateSetAirspeed_f(&pbn.airspeed);
 #endif

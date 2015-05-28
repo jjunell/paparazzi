@@ -39,11 +39,25 @@
 #include "mcu_periph/sys_time.h"
 #include "subsystems/electrical.h"
 #include "state.h"
+#include "pprz_version.h"
+
+// for waypoints, include correct header until we have unified API
+#ifdef AP
+#include "subsystems/navigation/common_nav.h"
+#else
+#include "firmwares/rotorcraft/navigation.h"
+#endif
+#include "generated/flight_plan.h"
+
 
 mavlink_system_t mavlink_system;
 
 static uint8_t mavlink_params_idx = NB_SETTING; /**< Transmitting parameters index */
-static char mavlink_params[NB_SETTING][16] = SETTINGS; /**< Transmitting parameter names */
+/** mavlink parameter names.
+ * 16 chars + 1 NULL termination.
+ */
+static char mavlink_param_names[NB_SETTING][16+1] = SETTINGS_NAMES_SHORT;
+static uint8_t custom_version[8]; /**< first 8 bytes (16 chars) of GIT SHA1 */
 
 static inline void mavlink_send_heartbeat(void);
 static inline void mavlink_send_sys_status(void);
@@ -56,6 +70,7 @@ static inline void mavlink_send_attitude_quaternion(void);
 static inline void mavlink_send_gps_raw_int(void);
 static inline void mavlink_send_rc_channels(void);
 static inline void mavlink_send_battery_status(void);
+static inline void mavlink_send_gps_global_origin(void);
 
 
 /// TODO: FIXME
@@ -68,6 +83,8 @@ void mavlink_init(void)
 {
   mavlink_system.sysid = AC_ID; // System ID, 1-255
   mavlink_system.compid = MAV_COMP_ID_MISSIONPLANNER; // Component/Subsystem ID, 1-255
+
+  get_pprz_git_version(custom_version);
 }
 
 /**
@@ -78,7 +95,8 @@ void mavlink_periodic(void)
 {
   RunOnceEvery(2, mavlink_send_heartbeat());
   RunOnceEvery(5, mavlink_send_sys_status());
-  RunOnceEvery(5, mavlink_send_attitude());
+  RunOnceEvery(10, mavlink_send_attitude());
+  RunOnceEvery(5, mavlink_send_attitude_quaternion());
   RunOnceEvery(5, mavlink_send_params());
   RunOnceEvery(4, mavlink_send_local_position_ned());
   RunOnceEvery(5, mavlink_send_global_position_int());
@@ -87,6 +105,32 @@ void mavlink_periodic(void)
   RunOnceEvery(5, mavlink_send_rc_channels());
   RunOnceEvery(21, mavlink_send_battery_status());
   RunOnceEvery(32, mavlink_send_autopilot_version());
+  RunOnceEvery(33, mavlink_send_gps_global_origin());
+}
+
+static int16_t settings_idx_from_param_id(char *param_id)
+{
+  int i, j;
+  int16_t settings_idx = -1;
+
+  // Go trough all the settings to search the ID
+  for (i = 0; i < NB_SETTING; i++) {
+    for (j = 0; j < 16; j++) {
+      if (mavlink_param_names[i][j] != param_id[j]) {
+        break;
+      }
+
+      if (mavlink_param_names[i][j] == '\0') {
+        settings_idx = i;
+        return settings_idx;
+      }
+    }
+
+    if (mavlink_param_names[i][j] == '\0') {
+      break;
+    }
+  }
+  return settings_idx;
 }
 
 /**
@@ -94,13 +138,12 @@ void mavlink_periodic(void)
  */
 void mavlink_event(void)
 {
-  int i, j;
   mavlink_message_t msg;
   mavlink_status_t status;
 
   // Check uplink
-  while (MAVLink(ChAvailable())) {
-    char test = MAVLink(Getch());
+  while (MAVLinkChAvailable()) {
+    char test = MAVLinkGetch();
 
     // When we receive a message
     if (mavlink_parse_char(MAVLINK_COMM_0, test, &msg, &status)) {
@@ -114,7 +157,7 @@ void mavlink_event(void)
           mavlink_msg_request_data_stream_decode(&msg, &cmd);
 
           mavlink_msg_data_stream_send(MAVLINK_COMM_0, cmd.req_stream_id, 0, 0);
-          MAVLink(SendMessage());
+          MAVLinkSendMessage();
           break;
         }
 
@@ -147,36 +190,88 @@ void mavlink_event(void)
 
           // First check param_index and search for the ID if needed
           if (cmd.param_index == -1) {
-
-            // Go trough all the settings to search the ID
-            for (i = 0; i < NB_SETTING; i++) {
-              for (j = 0; j < 16; j++) {
-                if (mavlink_params[i][j] != cmd.param_id[j]) {
-                  break;
-                }
-
-                if (mavlink_params[i][j] == '\0') {
-                  cmd.param_index = i;
-                  break;
-                }
-              }
-
-              if (mavlink_params[i][j] == '\0') {
-                break;
-              }
-            }
+            cmd.param_index = settings_idx_from_param_id(cmd.param_id);
           }
 
           mavlink_msg_param_value_send(MAVLINK_COMM_0,
-                                       mavlink_params[cmd.param_index],
+                                       mavlink_param_names[cmd.param_index],
                                        settings_get_value(cmd.param_index),
                                        MAV_PARAM_TYPE_REAL32,
                                        NB_SETTING,
                                        cmd.param_index);
-          MAVLink(SendMessage());
+          MAVLinkSendMessage();
 
           break;
         }
+
+        case MAVLINK_MSG_ID_PARAM_SET: {
+          mavlink_param_set_t set;
+          mavlink_msg_param_set_decode(&msg, &set);
+
+          // Check if this message is for this system
+          if ((uint8_t) set.target_system == AC_ID) {
+            int16_t idx = settings_idx_from_param_id(set.param_id);
+
+            // setting found
+            if (idx >= 0) {
+              // Only write if new value is NOT "not-a-number"
+              // AND is NOT infinity
+              if (set.param_type == MAV_PARAM_TYPE_REAL32 &&
+                  !isnan(set.param_value) && !isinf(set.param_value)) {
+                DlSetting(idx, set.param_value);
+                // Report back new value
+                mavlink_msg_param_value_send(MAVLINK_COMM_0,
+                                             mavlink_param_names[idx],
+                                             settings_get_value(idx),
+                                             MAV_PARAM_TYPE_REAL32,
+                                             NB_SETTING,
+                                             idx);
+                MAVLinkSendMessage();
+              }
+            }
+          }
+        }
+          break;
+
+        /* request for mission list, answer with number of waypoints */
+        case MAVLINK_MSG_ID_MISSION_REQUEST_LIST: {
+          mavlink_mission_request_list_t req;
+          mavlink_msg_mission_request_list_decode(&msg, &req);
+
+          if (req.target_system == mavlink_system.sysid) {
+            mavlink_msg_mission_count_send(MAVLINK_COMM_0,
+                                           msg.sysid,
+                                           msg.compid,
+                                           NB_WAYPOINT);
+            MAVLinkSendMessage();
+          }
+        }
+          break;
+
+        /* request for mission item, answer with waypoint */
+        case MAVLINK_MSG_ID_MISSION_REQUEST: {
+          mavlink_mission_request_t req;
+          mavlink_msg_mission_request_decode(&msg, &req);
+
+          if (req.target_system == mavlink_system.sysid) {
+            if (req.seq < NB_WAYPOINT) {
+              mavlink_msg_mission_item_send(MAVLINK_COMM_0,
+                                            msg.sysid,
+                                            msg.compid,
+                                            req.seq,
+                                            MAV_FRAME_LOCAL_ENU,
+                                            MAV_CMD_NAV_WAYPOINT,
+                                            0, // current
+                                            0, // autocontinue
+                                            0, 0, 0, 0, // params
+                                            WaypointX(req.seq),
+                                            WaypointY(req.seq),
+                                            WaypointAlt(req.seq));
+              MAVLinkSendMessage();
+            }
+          }
+        }
+          break;
 
         default:
           //Do nothing
@@ -193,13 +288,29 @@ void mavlink_event(void)
  */
 static inline void mavlink_send_heartbeat(void)
 {
+  uint8_t mav_state = MAV_STATE_CALIBRATING;
+  uint8_t mav_mode = MAV_MODE_FLAG_STABILIZE_ENABLED|MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
+#ifdef AP
+  uint8_t mav_type = MAV_TYPE_FIXED_WING;
+#else
+  uint8_t mav_type = MAV_TYPE_QUADROTOR;
+#endif
+  if (stateIsAttitudeValid()) {
+    if (kill_throttle) {
+      mav_state = MAV_STATE_STANDBY;
+    }
+    else {
+      mav_state = MAV_STATE_ACTIVE;
+      mav_mode |= MAV_MODE_FLAG_SAFETY_ARMED;
+    }
+  }
   mavlink_msg_heartbeat_send(MAVLINK_COMM_0,
-                             MAV_TYPE_QUADROTOR,
+                             mav_type,
                              MAV_AUTOPILOT_PPZ,
-                             MAV_MODE_FLAG_MANUAL_INPUT_ENABLED,
-                             0,
-                             MAV_STATE_STANDBY);
-  MAVLink(SendMessage());
+                             mav_mode,
+                             0, // custom_mode
+                             mav_state);
+  MAVLinkSendMessage();
 }
 
 /**
@@ -221,7 +332,7 @@ static inline void mavlink_send_sys_status(void)
                               0,      // Autopilot specific error 2
                               0,      // Autopilot specific error 3
                               0);     // Autopilot specific error 4
-  MAVLink(SendMessage());
+  MAVLinkSendMessage();
 }
 
 /**
@@ -237,7 +348,7 @@ static inline void mavlink_send_attitude(void)
                             stateGetBodyRates_f()->p,             // p
                             stateGetBodyRates_f()->q,             // q
                             stateGetBodyRates_f()->r);            // r
-  MAVLink(SendMessage());
+  MAVLinkSendMessage();
 }
 
 static inline void mavlink_send_local_position_ned(void)
@@ -250,7 +361,7 @@ static inline void mavlink_send_local_position_ned(void)
                                       stateGetSpeedNed_f()->x,
                                       stateGetSpeedNed_f()->y,
                                       stateGetSpeedNed_f()->z);
-  MAVLink(SendMessage());
+  MAVLinkSendMessage();
 }
 
 static inline void mavlink_send_global_position_int(void)
@@ -272,7 +383,18 @@ static inline void mavlink_send_global_position_int(void)
                                        stateGetSpeedNed_f()->y * 100,
                                        stateGetSpeedNed_f()->z * 100,
                                        compass_heading);
-  MAVLink(SendMessage());
+  MAVLinkSendMessage();
+}
+
+static inline void mavlink_send_gps_global_origin(void)
+{
+  if (state.ned_initialized_i) {
+    mavlink_msg_gps_global_origin_send(MAVLINK_COMM_0,
+                                       state.ned_origin_i.lla.lat,
+                                       state.ned_origin_i.lla.lon,
+                                       state.ned_origin_i.hmsl);
+    MAVLinkSendMessage();
+  }
 }
 
 /**
@@ -285,12 +407,12 @@ static inline void mavlink_send_params(void)
   }
 
   mavlink_msg_param_value_send(MAVLINK_COMM_0,
-                               mavlink_params[mavlink_params_idx],
+                               mavlink_param_names[mavlink_params_idx],
                                settings_get_value(mavlink_params_idx),
                                MAV_PARAM_TYPE_REAL32,
                                NB_SETTING,
                                mavlink_params_idx);
-  MAVLink(SendMessage());
+  MAVLinkSendMessage();
 
   mavlink_params_idx++;
 }
@@ -298,16 +420,15 @@ static inline void mavlink_send_params(void)
 static inline void mavlink_send_autopilot_version(void)
 {
   /// TODO: fill in versions correctly, how should they be encoded?
-  static uint8_t custom_version[8];
+  static uint32_t ver = PPRZ_VERSION_INT;
   mavlink_msg_autopilot_version_send(MAVLINK_COMM_0,
                                      0,  // capabilities,
-                                     54, // version
+                                     ver, // version
                                      custom_version);
 }
 
 static inline void mavlink_send_attitude_quaternion(void)
 {
-  /// TODO: check if same quaternion rotation or inverse
   mavlink_msg_attitude_quaternion_send(MAVLINK_COMM_0,
                                        get_sys_time_msec(),
                                        stateGetNedToBodyQuat_f()->qi,

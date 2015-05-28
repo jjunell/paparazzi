@@ -35,7 +35,8 @@ struct downlink downlink;
 #include "subsystems/datalink/datalink.h"
 #include "mcu_periph/sys_time.h"
 
-static void send_downlink(struct transport_tx *trans, struct link_device *dev) {
+static void send_downlink(struct transport_tx *trans, struct link_device *dev)
+{
   static uint32_t last_nb_bytes = 0;
   // timestamp in usec when last message was send
   static uint32_t last_ts = 0.;
@@ -50,8 +51,8 @@ static void send_downlink(struct transport_tx *trans, struct link_device *dev) {
     // TODO uplink nb received msg
     uint16_t uplink_nb_msgs = 0;
     pprz_msg_send_DATALINK_REPORT(trans, dev, AC_ID,
-        &datalink_time, &uplink_nb_msgs,
-        &downlink.nb_msgs, &rate, &downlink.nb_ovrn);
+                                  &datalink_time, &uplink_nb_msgs,
+                                  &downlink.nb_msgs, &rate, &downlink.nb_ovrn);
   }
 }
 #endif
@@ -64,7 +65,7 @@ void downlink_init(void)
 
 #if defined DATALINK
 #if DATALINK == PPRZ || DATALINK == SUPERBITRF || DATALINK == W5100
-  pprz_transport_init();
+  pprz_transport_init(&pprz_tp);
 #endif
 #if DATALINK == XBEE
   xbee_init();
@@ -72,6 +73,10 @@ void downlink_init(void)
 #if DATALINK == W5100
   w5100_init();
 #endif
+#endif
+
+#if USE_PPRZLOG
+  pprzlog_transport_init();
 #endif
 
 #if SITL

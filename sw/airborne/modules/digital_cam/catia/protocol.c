@@ -17,7 +17,7 @@ uint8_t mora_ck_a, mora_ck_b;
 
 struct mora_transport mora_protocol;
 
-void parse_mora(struct mora_transport* t, uint8_t c)
+void parse_mora(struct mora_transport *t, uint8_t c)
 {
 //printf("%02X %d %d\n",c, t->status, t->error);
 
@@ -75,28 +75,3 @@ restart:
   t->status = UNINIT;
   return;
 }
-
-
-/*
-static inline void pprz_parse_payload(struct pprz_transport * t) {
-  uint8_t i;
-  for(i = 0; i < t->trans.payload_len; i++)
-    dl_buffer[i] = t->trans.payload[i];
-  dl_msg_available = TRUE;
-}
-
-
-#define PprzBuffer(_dev) TransportLink(_dev,ChAvailable())
-#define ReadPprzBuffer(_dev,_trans) { while (TransportLink(_dev,ChAvailable())&&!(_trans.trans.msg_received)) parse_pprz(&(_trans),TransportLink(_dev,Getch())); }
-#define PprzCheckAndParse(_dev,_trans) {  \
-  if (PprzBuffer(_dev)) {                 \
-    ReadPprzBuffer(_dev,_trans);          \
-    if (_trans.trans.msg_received) {      \
-      pprz_parse_payload(&(_trans));      \
-      _trans.trans.msg_received = FALSE;  \
-    }                                     \
-  }                                       \
-}
-*/
-
-

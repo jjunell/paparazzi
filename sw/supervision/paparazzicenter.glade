@@ -298,6 +298,15 @@
                         <signal name="activate" handler="on_about3_activate"/>
                       </widget>
                     </child>
+                    <child>
+                      <widget class="GtkMenuItem" id="menu_item_version">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_action_appearance">False</property>
+                        <property name="label" translatable="yes">_Version</property>
+                        <property name="use_underline">True</property>
+                      </widget>
+                    </child>
                   </widget>
                 </child>
               </widget>
@@ -514,6 +523,7 @@
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">________________</property>
+                                            <property name="ellipsize">start</property>
                                           </widget>
                                           <packing>
                                             <property name="expand">True</property>
@@ -594,6 +604,7 @@
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">_________________</property>
+                                            <property name="ellipsize">start</property>
                                           </widget>
                                           <packing>
                                             <property name="expand">True</property>
@@ -816,6 +827,7 @@
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">_________________</property>
+                                            <property name="ellipsize">start</property>
                                           </widget>
                                           <packing>
                                             <property name="expand">True</property>
@@ -894,6 +906,7 @@
                                             <property name="visible">True</property>
                                             <property name="can_focus">False</property>
                                             <property name="label" translatable="yes">_________________</property>
+                                            <property name="ellipsize">start</property>
                                           </widget>
                                           <packing>
                                             <property name="expand">True</property>

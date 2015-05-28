@@ -100,6 +100,20 @@ let log_xml = fun timeofday data_file ->
 
 let start_time = U.gettimeofday ()
 
+(* Run a command and return its results as a string. *)
+let read_process command =
+  let buffer_size = 2048 in
+  let buffer = Buffer.create buffer_size in
+  let string = String.create buffer_size in
+  let in_channel = Unix.open_process_in command in
+  let chars_read = ref 1 in
+  while !chars_read <> 0 do
+    chars_read := input in_channel string 0 buffer_size;
+    Buffer.add_substring buffer string 0 !chars_read
+  done;
+  ignore (Unix.close_process_in in_channel);
+  Buffer.contents buffer
+
 (* Opens the log files *)
 let logger = fun () ->
   let d = U.localtime start_time in
@@ -111,6 +125,20 @@ let logger = fun () ->
   let log_name = sprintf "%s.log" basename
   and data_name = sprintf "%s.data" basename in
   let f = open_out (logs_path // log_name) in
+  (* version string with whitespace/newline at the end stripped *)
+  let version_str =
+    try
+      Str.replace_first (Str.regexp "[ \n]+$") "" (read_process (Env.paparazzi_src ^ "/paparazzi_version"))
+    with _ -> "UNKNOWN" in
+  output_string f ("<!-- logged with runtime paparazzi_version " ^ version_str ^ " -->\n");
+  let build_str =
+    try
+      let f = open_in (Env.paparazzi_home ^ "/var/build_version.txt") in
+      let s = try input_line f with _ -> "UNKNOWN" in
+      close_in f;
+      s
+    with _ -> "UNKNOWN" in
+  output_string f ("<!-- logged with build paparazzi_version " ^ build_str ^ " -->\n");
   output_string f (Xml.to_string_fmt (log_xml start_time data_name));
   close_out f;
   open_out (logs_path // data_name)
@@ -281,13 +309,13 @@ let send_telemetry_status = fun a ->
   let id = a.id in
   let tl_payload = fun link_id datalink_status link_status ->
     [ "ac_id", Pprz.String id;
-      "link_id", Pprz.String link_id; 
+      "link_id", Pprz.String link_id;
       "time_since_last_msg", Pprz.Float (U.gettimeofday () -. a.last_msg_date); (* don't use rx_lost_time from LINK_REPORT so it also works in simulation *)
-      "rx_bytes", Pprz.Int link_status.rx_bytes;
-      "rx_msgs", Pprz.Int link_status.rx_msgs;
+      "rx_bytes", Pprz.Int64 (Int64.of_int link_status.rx_bytes);
+      "rx_msgs", Pprz.Int64 (Int64.of_int link_status.rx_msgs);
       "rx_bytes_rate", Pprz.Float link_status.rx_bytes_rate;
-      "tx_msgs", Pprz.Int link_status.tx_msgs;
-      "uplink_lost_time", Pprz.Int datalink_status.uplink_lost_time;
+      "tx_msgs", Pprz.Int64 (Int64.of_int link_status.tx_msgs);
+      "uplink_lost_time", Pprz.Int64 (Int64.of_int datalink_status.uplink_lost_time);
       "uplink_msgs", Pprz.Int datalink_status.uplink_msgs;
       "downlink_msgs", Pprz.Int datalink_status.downlink_msgs;
       "downlink_rate", Pprz.Int datalink_status.downlink_rate;
@@ -339,7 +367,7 @@ let send_aircraft_msg = fun ac ->
                   "lat", f ((Rad>>Deg)wgs84.posn_lat);
                   "long", f ((Rad>>Deg) wgs84.posn_long);
                   "unix_time", f a.unix_time;
-                  "itow", Pprz.Int32 a.itow;
+                  "itow", Pprz.Int64 a.itow;
                   "speed", f a.gspeed;
                   "airspeed", f a.airspeed; (* negative value is sent if no airspeed available *)
                   "course", f (Geometry_2d.rad2deg a.course);
@@ -351,16 +379,17 @@ let send_aircraft_msg = fun ac ->
     (** send ACINFO messages if more than one A/C registered *)
     if Hashtbl.length aircrafts > 1 then
       begin
+        let cm_of_m_32 = fun f -> Pprz.Int32 (Int32.of_int (truncate (100. *. f))) in
         let cm_of_m = fun f -> Pprz.Int (truncate (100. *. f)) in
         let pos = LL.utm_of WGS84 a.pos in
         let ac_info = ["ac_id", Pprz.String ac;
-                       "utm_east", cm_of_m pos.utm_x;
-                       "utm_north", cm_of_m pos.utm_y;
+                       "utm_east", cm_of_m_32 pos.utm_x;
+                       "utm_north", cm_of_m_32 pos.utm_y;
                        "course", Pprz.Int (truncate (10. *. (Geometry_2d.rad2deg a.course)));
-                       "alt", cm_of_m a.alt;
+                       "alt", cm_of_m_32 a.alt;
                        "speed", cm_of_m a.gspeed;
                        "climb", cm_of_m a.climb;
-                       "itow", Pprz.Int32 a.itow] in
+                       "itow", Pprz.Int64 a.itow] in
         Dl_Pprz.message_send my_id "ACINFO" ac_info;
       end;
 
@@ -373,8 +402,8 @@ let send_aircraft_msg = fun ac ->
             let values = ["ac_id", Pprz.String ac;
                           "cur_block", Pprz.Int a.cur_block;
                           "cur_stage", Pprz.Int a.cur_stage;
-                          "stage_time", Pprz.Int a.stage_time;
-                          "block_time", Pprz.Int a.block_time;
+                          "stage_time", Pprz.Int64 (Int64.of_int a.stage_time);
+                          "block_time", Pprz.Int64 (Int64.of_int a.block_time);
                           "target_lat", f ((Rad>>Deg)a.desired_pos.posn_lat);
                           "target_long", f ((Rad>>Deg)a.desired_pos.posn_long);
                           "target_alt", Pprz.Float a.desired_altitude;
@@ -404,7 +433,7 @@ let send_aircraft_msg = fun ac ->
     let state_filter_mode = get_indexed_value state_filter_modes a.state_filter_mode
     and kill_mode = if a.kill_mode then "ON" else "OFF" in
     let values = ["ac_id", Pprz.String ac;
-                  "flight_time", Pprz.Int a.flight_time;
+                  "flight_time", Pprz.Int64 (Int64.of_int a.flight_time);
                   "ap_mode", Pprz.String ap_mode;
                   "gaz_mode", Pprz.String gaz_mode;
                   "lat_mode", Pprz.String lat_mode;
@@ -594,14 +623,17 @@ let register_aircraft = fun name a ->
 
 
 (** Identifying message from an A/C *)
-let ident_msg = fun log name vs ->
+let ident_msg = fun log timestamp name vs ->
   try
     if not (Hashtbl.mem aircrafts name) &&
       not (Hashtbl.mem unknown_aircrafts name) then
       let get_md5sum = fun () -> Pprz.assoc "md5sum" vs in
       let ac, messages_xml = new_aircraft get_md5sum name in
       let ac_msg_closure = ac_msg messages_xml log name ac in
-      let _b = Ivy.bind (fun _ args -> ac_msg_closure args.(1) args.(2)) (sprintf "^(([0-9]+\\.[0-9]+) )?%s +(.*)" name) in
+      let tsregexp = if timestamp then "(([0-9]+\\.[0-9]+) )?" else "" in
+      let _b =
+        Ivy.bind (fun _ args -> if timestamp then ac_msg_closure args.(1) args.(2) else ac_msg_closure "" args.(0))
+        (sprintf "^%s%s +(.*)" tsregexp name) in
       register_aircraft name ac;
       Ground_Pprz.message_send my_id "NEW_AIRCRAFT" ["ac_id", Pprz.String name]
   with
@@ -611,11 +643,11 @@ let new_color = fun () ->
   sprintf "#%02x%02x%02x" (Random.int 256) (Random.int 256) (Random.int 256)
 
 (* Waits for new aircrafts *)
-let listen_acs = fun log ->
+let listen_acs = fun log timestamp ->
   (** Wait for any message (they all are identified with the A/C) *)
-  ignore (Tm_Pprz.message_bind "ALIVE" (ident_msg log));
+  ignore (Tm_Pprz.message_bind "ALIVE" (ident_msg log timestamp));
   if !replay_old_log then
-    ignore (Tm_Pprz.message_bind "PPRZ_MODE" (ident_msg log))
+    ignore (Tm_Pprz.message_bind "PPRZ_MODE" (ident_msg log timestamp))
 
 
 let send_config = fun http _asker args ->
@@ -655,8 +687,12 @@ let ivy_server = fun http ->
   ignore (Ground_Pprz.message_answerer my_id "AIRCRAFTS" send_aircrafts_msg);
   ignore (Ground_Pprz.message_answerer my_id "CONFIG" (send_config http))
 
+(** Convert to cm, with rounding *)
+let cm_of_m = fun f -> Pprz.Int (truncate ((100. *. f) +. 0.5))
 
-let cm_of_m = fun f -> Pprz.Int (truncate ((100. *. f) +. 0.5)) (* Convert to cm, with rounding *)
+(** Convert to mm, with rounding *)
+let mm_of_m_32 = fun f -> Pprz.Int32 (Int32.of_int (truncate ((1000. *. f) +. 0.5)))
+
 let dl_id = "ground_dl" (* Hack, should be [my_id] *)
 
 (** Got a ground.MOVE_WAYPOINT and send a datalink.MOVE_WP *)
@@ -668,7 +704,7 @@ let move_wp = fun logging _sender vs ->
              "ac_id", Pprz.String ac_id;
              "lat", deg7 "lat";
              "lon", deg7 "long";
-             "alt", cm_of_m (Pprz.float_assoc "alt" vs) ] in
+             "alt", mm_of_m_32 (Pprz.float_assoc "alt" vs) ] in
   Dl_Pprz.message_send dl_id "MOVE_WP" vs;
   log logging ac_id "MOVE_WP" vs
 
@@ -733,6 +769,7 @@ let link_report = fun logging _sender vs ->
       ping_time = Pprz.float_assoc "ping_time" vs;
     } in
     Hashtbl.replace ac.link_status link_id link_status;
+    log logging ac_id "LINK_REPORT" vs
   with _ -> ()
 
 
@@ -752,7 +789,8 @@ let ground_to_uplink = fun logging ->
 let () =
   let ivy_bus = ref Defivybus.default_ivy_bus
   and logging = ref true
-  and http = ref false in
+  and http = ref false
+  and timestamp = ref false in
 
   let options =
     [ "-b", Arg.String (fun x -> ivy_bus := x), (sprintf "Bus\tDefault is %s" !ivy_bus);
@@ -762,6 +800,7 @@ let () =
       "-kml_no_http", Arg.Set Kml.no_http, "KML without web server (local files only)";
       "-kml_port", Arg.Set_int Kml.port, (sprintf "Port for KML files (default is %d)" !Kml.port);
       "-n", Arg.Clear logging, "Disable log";
+      "-timestamp", Arg.Set timestamp, "Bind on timestampped messages";
       "-no_md5_check", Arg.Set no_md5_check, "Disable safety matching of live and current configurations";
       "-replay_old_log", Arg.Set replay_old_log, "Enable aircraft registering on PPRZ_MODE messages"] in
 
@@ -783,7 +822,7 @@ let () =
       None in
 
   (* Waits for new aircrafts *)
-  listen_acs logging;
+  listen_acs logging !timestamp;
 
   (* Forward messages from ground agents to vehicles *)
   ground_to_uplink logging;

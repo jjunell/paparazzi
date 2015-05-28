@@ -61,9 +61,15 @@ class track = fun ?(name="Noname") ?(icon="fixedwing") ?(size = 500) ?(color="re
   let aircraft = GnoCanvas.group group
   and track = GnoCanvas.group group in
   let icon_template = match icon with
-  | "home" -> ACI.icon_home_template
-  | "rotorcraft" -> ACI.icon_rotorcraft_template
-  | "flyingwing" -> ACI.icon_flyingwing_template
+  | "home"          -> ACI.icon_home_template
+  | "rotorcraft"    -> ACI.icon_rotorcraft_template
+  | "quadrotor"     -> ACI.icon_quadrotor_template
+  | "hexarotor"     -> ACI.icon_hexarotor_template
+  | "octorotor"     -> ACI.icon_octorotor_template
+  | "quadrotor_x"   -> ACI.icon_quadrotor_x_template
+  | "hexarotor_x"   -> ACI.icon_hexarotor_x_template
+  | "octorotor_x"   -> ACI.icon_octorotor_x_template
+  | "flyingwing"    -> ACI.icon_flyingwing_template
   | "fixedwing" | _ -> ACI.icon_fixedwing_template
   in
   let _ac_icon = new ACI.widget ~color ~icon_template aircraft in
@@ -101,10 +107,10 @@ class track = fun ?(name="Noname") ?(icon="fixedwing") ?(size = 500) ?(color="re
 object (self)
   val mutable top = 0
   val mutable color = color
-  val mutable segments = Array.create size empty
-  val mutable v_segments = Array.create size empty
+  val mutable segments = Array.make size empty
+  val mutable v_segments = Array.make size empty
   val mutable v_top = 0
-  val mutable v_path = Array.create 10 v_empty
+  val mutable v_path = Array.make 10 v_empty
   val mutable last = None
   val mutable last_heading = 0.0
   val mutable last_altitude = 0.0
@@ -215,7 +221,7 @@ object (self)
     (** draws the circular path to be followed by the aircraft in circle mode *)
   method draw_circle = fun en radius ->
     let create = fun () ->
-      desired_track <- DesiredCircle (en, radius, geomap#circle ~color:"green" en radius) in
+      desired_track <- DesiredCircle (en, radius, geomap#circle ~color:"#00ff00" en radius) in
     match desired_track with
         DesiredCircle (c, r, circle) ->
           if c <> en || r <> radius then begin
@@ -231,7 +237,7 @@ object (self)
     (** draws the linear path to be followed by the aircraft between two waypoints *)
   method draw_segment = fun en1 en2 ->
     let create = fun () ->
-      desired_track <- DesiredSegment (en1, en2, geomap#segment ~fill_color:"green" en1 en2) in
+      desired_track <- DesiredSegment (en1, en2, geomap#segment ~fill_color:"#00ff00" en1 en2) in
     match desired_track with
         DesiredCircle (c, r, circle) ->
           circle#destroy ();
@@ -313,7 +319,7 @@ object (self)
     aircraft#affine_absolute a
 
   method resize =  fun new_size ->
-    let a = Array.create new_size empty in
+    let a = Array.make new_size empty in
     let size =  Array.length segments in
     let m = min new_size size in
     let j = ref ((top - m + size) mod size) in

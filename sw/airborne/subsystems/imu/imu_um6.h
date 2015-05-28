@@ -19,17 +19,17 @@
  * the Free Software Foundation, 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
- /**
- * @file imu_um6.h
- *
- * Driver for CH Robotics UM6 IMU/AHRS subsystem
- *
- * Takes care of configuration of the IMU, communication and parsing
- * the received packets. See UM6 datasheet for configuration options.
- * Should be used with ahrs_extern_euler AHRS subsystem.
- *
- * @author Michal Podhradsky <michal.podhradsky@aggiemail.usu.edu>
- */
+/**
+* @file imu_um6.h
+*
+* Driver for CH Robotics UM6 IMU/AHRS subsystem
+*
+* Takes care of configuration of the IMU, communication and parsing
+* the received packets. See UM6 datasheet for configuration options.
+* Should be used with ahrs_extern_euler AHRS subsystem.
+*
+* @author Michal Podhradsky <michal.podhradsky@aggiemail.usu.edu>
+*/
 #ifndef IMU_UM6_H
 #define IMU_UM6_H
 
@@ -37,12 +37,6 @@
 #include "subsystems/imu.h"
 #include "mcu_periph/uart.h"
 #include "subsystems/ahrs.h"
-
-#define __UM6Link(dev, _x) dev##_x
-#define _UM6Link(dev, _x)  __UM6Link(dev, _x)
-#define UM6Link(_x) _UM6Link(UM6_LINK, _x)
-
-#define UM6Buffer() UM6Link(ChAvailable())
 
 #define IMU_UM6_BUFFER_LENGTH 32
 #define IMU_UM6_DATA_OFFSET 5
@@ -104,27 +98,25 @@ enum UM6Status {
   UM6Running
 };
 
-#define imu_um6_event(_callback1, _callback2, _callback3) { \
-    if (UM6Buffer()) {                                      \
-      ReadUM6Buffer();                                      \
-    }                                                       \
-    if (UM6_packet.msg_available) {                         \
-      UM6_packet.msg_available = FALSE;                     \
-      UM6_packet_read_message();                            \
-      _callback1();                                         \
-      _callback2();                                         \
-      _callback3();                                         \
-    }                                                       \
+static inline void imu_um6_event(void (* cb1)(void), void (*cb2)(void), void (*cb3)(void))
+{
+  if (uart_char_available(&(UM6_LINK))) {
+    while (uart_char_available(&(UM6_LINK)) && !UM6_packet.msg_available) {
+      UM6_packet_parse(uart_getch(&(UM6_LINK)));
+    }
+    if (UM6_packet.msg_available) {
+      UM6_packet.msg_available = FALSE;
+      UM6_packet_read_message();
+      cb1();
+      cb2();
+      cb3();
+    }
   }
-
-#define ReadUM6Buffer() {                                       \
-    while (UM6Link(ChAvailable())&&!UM6_packet.msg_available)   \
-      UM6_packet_parse(UM6Link(Getch()));                       \
-  }
+}
 
 #define ImuEvent(_gyro_handler, _accel_handler, _mag_handler) { \
-  imu_um6_event(_gyro_handler, _accel_handler, _mag_handler); \
-}
+    imu_um6_event(_gyro_handler, _accel_handler, _mag_handler); \
+  }
 
 
 #endif /* IMU_UM6_H*/

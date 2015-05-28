@@ -58,21 +58,8 @@ struct Imu {
   bool_t b2i_set_current;
 };
 
-/** abstract IMU interface providing floating point interface  */
-struct ImuFloat {
-  struct FloatRates   gyro;
-  struct FloatVect3   accel;
-  struct FloatVect3   mag;
-  struct FloatRates   gyro_prev;
-  struct OrientationReps body_to_imu; ///< rotation from body to imu frame
-  uint32_t sample_count;
-};
-
-
-
 /** global IMU state */
 extern struct Imu imu;
-extern struct ImuFloat imuf;
 
 /* underlying hardware */
 #ifdef IMU_TYPE_H
@@ -87,9 +74,9 @@ extern void imu_SetBodyToImuCurrent(float set);
 extern void imu_ResetBodyToImu(float reset);
 
 /* can be provided implementation */
-extern void imu_scale_gyro(struct Imu* _imu);
-extern void imu_scale_accel(struct Imu* _imu);
-extern void imu_scale_mag(struct Imu* _imu);
+extern void imu_scale_gyro(struct Imu *_imu);
+extern void imu_scale_accel(struct Imu *_imu);
+extern void imu_scale_mag(struct Imu *_imu);
 
 #if !defined IMU_BODY_TO_IMU_PHI && !defined IMU_BODY_TO_IMU_THETA && !defined IMU_BODY_TO_IMU_PSI
 #define IMU_BODY_TO_IMU_PHI   0

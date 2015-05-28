@@ -31,17 +31,13 @@
 #include "stabilization.h"
 
 struct DirectMemoryLogger dml;
-static void direct_memory_spi_cb(struct spi_transaction* trans);
-static int32_t seq_in_array(uint8_t* array, uint16_t array_size, uint8_t* sequence, uint16_t sequence_size);
+static void direct_memory_spi_cb(struct spi_transaction *trans);
+static int32_t seq_in_array(uint8_t *array, uint16_t array_size, uint8_t *sequence, uint16_t sequence_size);
 
 // Different sequences
 static uint8_t start_log_sequence[6] = {0xAA, 0x55, 0xFF, 0x00, 0x55, 0xAA};
 static uint8_t stop_log_sequence[6] = {0xFF, 0x00, 0x55, 0xAA, 0x10, 0xFF};
 
-// The logging output connection
-#define __DMLoggerLink(dev, _x) dev##_x
-#define _DMLoggerLink(dev, _x)  __DMLoggerLink(dev, _x)
-#define DMLoggerLink(_x) _DMLoggerLink(DM_LOG_UART, _x)
 
 // Logging struct
 struct LogStruct {
@@ -55,7 +51,7 @@ struct LogStruct {
 static struct LogStruct log_struct;
 static uint32_t dm_counter = 0;
 
-static int32_t seq_in_array(uint8_t* array, uint16_t array_size, uint8_t* sequence, uint16_t sequence_size)
+static int32_t seq_in_array(uint8_t *array, uint16_t array_size, uint8_t *sequence, uint16_t sequence_size)
 {
   uint16_t i;
   static uint16_t current_sequence_id = 0;
@@ -141,7 +137,7 @@ void direct_memory_logger_periodic(void)
       log_struct.gyro_r    = imu.gyro.r;
       log_struct.thrust    = stabilization_cmd[COMMAND_THRUST];
 
-      sst25vfxxxx_write(&dml.sst, (uint8_t*) &log_struct, sizeof(struct LogStruct));
+      sst25vfxxxx_write(&dml.sst, (uint8_t *) &log_struct, sizeof(struct LogStruct));
       break;
 
       // Reading
@@ -149,7 +145,7 @@ void direct_memory_logger_periodic(void)
       dml.status = DML_READING;
     case DML_READING:
 
-      if (DMLoggerLink(TxRunning) || dml.sst.status != SST25VFXXXX_IDLE) {
+      if (DM_LOG_UART.tx_running || dml.sst.status != SST25VFXXXX_IDLE) {
         break;
       }
 
@@ -163,7 +159,7 @@ void direct_memory_logger_periodic(void)
       }
 
       for (i = 5; i < end_idx; i++) {
-        DMLoggerLink(Transmit(dml.buffer[i]));
+        uart_transmit(&DM_LOG_UART, dml.buffer[i]);
       }
 
       // Read next bytes
@@ -215,7 +211,7 @@ void direct_memory_logger_set(uint8_t val)
   }
 }
 
-static void direct_memory_spi_cb(__attribute__((unused)) struct spi_transaction* trans)
+static void direct_memory_spi_cb(__attribute__((unused)) struct spi_transaction *trans)
 {
   sst25vfxxxx_after_cb(&dml.sst);
 }

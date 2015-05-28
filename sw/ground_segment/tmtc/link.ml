@@ -54,7 +54,7 @@ type ground_device = {
 let my_id = 0
 
 (* Here we set the default id of the link*)
-let link_id = ref 0
+let link_id = ref (-1)
 let red_link = ref false
 
 (* enable broadcast messages by default *)
@@ -161,11 +161,10 @@ let send_status_msg =
       and msg_rate = float (status.rx_msg - status.last_rx_msg) /. dt in
       status.last_rx_msg <- status.rx_msg;
       status.last_rx_byte <- status.rx_byte;
-      status.ms_since_last_msg <- status.ms_since_last_msg + status_msg_period;
       let vs = ["ac_id", Pprz.Int ac_id;
                 "link_id", Pprz.Int !link_id;
                 "run_time", Pprz.Int t;
-                "rx_lost_time", Pprz.Int (1000 * status.ms_since_last_msg);
+                "rx_lost_time", Pprz.Int (status.ms_since_last_msg / 1000);
                 "rx_bytes", Pprz.Int status.rx_byte;
                 "rx_msgs", Pprz.Int status.rx_msg;
                 "rx_err", Pprz.Int status.rx_err;
@@ -177,6 +176,11 @@ let send_status_msg =
       send_ground_over_ivy "link" "LINK_REPORT" vs)
       statuss
 
+let update_ms_since_last_msg =
+  fun () ->
+    Hashtbl.iter (fun ac_id status ->
+      status.ms_since_last_msg <- status.ms_since_last_msg + status_msg_period / 3)
+      statuss
 
 let use_tele_message = fun ?udp_peername ?raw_data_size payload ->
   let raw_data_size = match raw_data_size with None -> String.length (Serial.string_of_payload payload) | Some d -> d in
@@ -240,7 +244,7 @@ module XB = struct (** XBee module *)
       false))
 
   (* Array of sent packets for retry: (packet, nb of retries) *)
-  let packets = Array.create 256 ("", -1)
+  let packets = Array.make 256 ("", -1)
 
   (* Frame id generation > 0 and < 256 *)
   let gen_frame_id =
@@ -474,7 +478,6 @@ let () =
       "-udp", Arg.Set udp, "Listen a UDP connection on <udp_port>";
       "-udp_port", Arg.Set_int udp_port, (sprintf "<UDP port> Default is %d" !udp_port);
       "-udp_uplink_port", Arg.Set_int udp_uplink_port, (sprintf "<UDP uplink port> Default is %d" !udp_uplink_port);
-      "-udp_port", Arg.Set_int udp_port, (sprintf "<UDP port> Default is %d" !udp_port);
       "-uplink", Arg.Set uplink, (sprintf "Deprecated (now default)");
       "-xbee_addr", Arg.Set_int XB.my_addr, (sprintf "<my_addr> (%d)" !XB.my_addr);
       "-xbee_retries", Arg.Set_int XB.my_addr, (sprintf "<nb retries> (%d)" !XB.nb_retries);
@@ -488,7 +491,7 @@ let () =
   Ivy.init "Link" "READY" (fun _ _ -> ());
   Ivy.start !ivy_bus;
 
-  if (!link_id <> 0) && (not !red_link) then
+  if (!link_id <> -1) && (not !red_link) then
     fprintf stderr "\nLINK WARNING: The link id was set to %i but the -redlink flag wasn't set. To use this link as a redundant link, set the -redlink flag.%!" !link_id;
 
   try
@@ -546,6 +549,7 @@ let () =
     (** Init and Periodic tasks *)
     begin
       ignore (Glib.Timeout.add status_msg_period (fun () -> send_status_msg (); true));
+      ignore (Glib.Timeout.add (status_msg_period / 3) (fun () -> update_ms_since_last_msg (); true));
       let start_ping = fun () ->
         ignore (Glib.Timeout.add ping_msg_period (fun () -> send_ping_msg device; true));
         false in

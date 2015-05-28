@@ -38,14 +38,16 @@ static const char *gps_furuno_settings[GPS_FURUNO_SETTINGS_NB] = {
   "PERDCFG,NMEAOUT,GGA,1",      // Enable GGA every fix
   "PERDCFG,NMEAOUT,RMC,1",      // Enable RMC every fix
   "PERDCFG,NMEAOUT,GSA,1",      // Enable GSA every fix
-  "PERDCFG,NMEAOUT,GNS,0",      // Disable GSA
+  "PERDCFG,NMEAOUT,GNS,0",      // Disable GNS
   "PERDCFG,NMEAOUT,ZDA,0",      // Disable ZDA
   "PERDCFG,NMEAOUT,GSV,0",      // Disable GSV
-  "PERDCFG,NMEAOUT,GST,0",      // Disable ZDA
+  "PERDCFG,NMEAOUT,GST,0",      // Disable GST
   "PERDAPI,CROUT,V"             // Enable raw velocity
 };
 
 static void nmea_parse_perdcrv(void);
+
+#define GpsLinkDevice (&(GPS_LINK).device)
 
 void nmea_parse_prop_init(void)
 {
@@ -64,9 +66,9 @@ void nmea_parse_prop_init(void)
     sprintf(buf, "$%s*%02X\r\n", gps_furuno_settings[i], crc);
 
     // Check if there is enough space to send the config msg
-    if (GpsLink(CheckFreeSpace(len + 6))) {
+    if (GpsLinkDevice->check_free_space(GpsLinkDevice->periph, len + 6)) {
       for (j = 0; j < len + 6; j++) {
-        GpsLink(Transmit(buf[j]));
+        GpsLinkDevice->put_byte(GpsLinkDevice->periph, buf[j]);
       }
     } else {
       break;

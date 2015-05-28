@@ -2,9 +2,10 @@
 
 # Furuno NMEA GPS unit
 
+FURUNO_GPS_PORT_LOWER=$(shell echo $(GPS_PORT) | tr A-Z a-z)
 
 ap.CFLAGS += -DUSE_GPS
-ap.CFLAGS += -DGPS_LINK=$(GPS_PORT)
+ap.CFLAGS += -DGPS_LINK=$(FURUNO_GPS_PORT_LOWER)
 ap.CFLAGS += -DUSE_$(GPS_PORT)
 ap.CFLAGS += -D$(GPS_PORT)_BAUD=$(GPS_BAUD)
 ap.CFLAGS += -DNMEA_PARSE_PROP
@@ -19,6 +20,6 @@ ap.srcs   += $(SRC_SUBSYSTEMS)/gps/gps_nmea.c $(SRC_SUBSYSTEMS)/gps/gps_furuno.c
 $(TARGET).srcs += $(SRC_SUBSYSTEMS)/gps.c
 
 nps.CFLAGS += -DUSE_GPS
-nps.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_sim.h\"
+nps.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_sim_nps.h\"
 nps.srcs += $(SRC_SUBSYSTEMS)/gps/gps_sim_nps.c
 

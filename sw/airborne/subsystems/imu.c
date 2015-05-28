@@ -30,6 +30,7 @@
 
 #include "subsystems/imu.h"
 #include "state.h"
+#include "subsystems/abi.h"
 
 #ifdef IMU_POWER_GPIO
 #include "mcu_periph/gpio.h"
@@ -42,78 +43,72 @@
 #if PERIODIC_TELEMETRY
 #include "subsystems/datalink/telemetry.h"
 
-#if USE_IMU_FLOAT
-
-static void send_accel(struct transport_tx *trans, struct link_device *dev) {
-  pprz_msg_send_IMU_ACCEL(trans, dev, AC_ID,
-      &imuf.accel.x, &imuf.accel.y, &imuf.accel.z);
-}
-
-static void send_gyro(struct transport_tx *trans, struct link_device *dev) {
-  pprz_msg_send_IMU_GYRO(trans, dev, AC_ID,
-      &imuf.gyro.p, &imuf.gyro.q, &imuf.gyro.r);
-}
-
-#else // !USE_IMU_FLOAT
-
-static void send_accel_raw(struct transport_tx *trans, struct link_device *dev) {
+static void send_accel_raw(struct transport_tx *trans, struct link_device *dev)
+{
   pprz_msg_send_IMU_ACCEL_RAW(trans, dev, AC_ID,
-      &imu.accel_unscaled.x, &imu.accel_unscaled.y, &imu.accel_unscaled.z);
+                              &imu.accel_unscaled.x, &imu.accel_unscaled.y, &imu.accel_unscaled.z);
 }
 
-static void send_accel_scaled(struct transport_tx *trans, struct link_device *dev) {
+static void send_accel_scaled(struct transport_tx *trans, struct link_device *dev)
+{
   pprz_msg_send_IMU_ACCEL_SCALED(trans, dev, AC_ID,
-      &imu.accel.x, &imu.accel.y, &imu.accel.z);
+                                 &imu.accel.x, &imu.accel.y, &imu.accel.z);
 }
 
-static void send_accel(struct transport_tx *trans, struct link_device *dev) {
+static void send_accel(struct transport_tx *trans, struct link_device *dev)
+{
   struct FloatVect3 accel_float;
   ACCELS_FLOAT_OF_BFP(accel_float, imu.accel);
   pprz_msg_send_IMU_ACCEL(trans, dev, AC_ID,
-      &accel_float.x, &accel_float.y, &accel_float.z);
+                          &accel_float.x, &accel_float.y, &accel_float.z);
 }
 
-static void send_gyro_raw(struct transport_tx *trans, struct link_device *dev) {
+static void send_gyro_raw(struct transport_tx *trans, struct link_device *dev)
+{
   pprz_msg_send_IMU_GYRO_RAW(trans, dev, AC_ID,
-      &imu.gyro_unscaled.p, &imu.gyro_unscaled.q, &imu.gyro_unscaled.r);
+                             &imu.gyro_unscaled.p, &imu.gyro_unscaled.q, &imu.gyro_unscaled.r);
 }
 
-static void send_gyro_scaled(struct transport_tx *trans, struct link_device *dev) {
+static void send_gyro_scaled(struct transport_tx *trans, struct link_device *dev)
+{
   pprz_msg_send_IMU_GYRO_SCALED(trans, dev, AC_ID,
-      &imu.gyro.p, &imu.gyro.q, &imu.gyro.r);
+                                &imu.gyro.p, &imu.gyro.q, &imu.gyro.r);
 }
 
-static void send_gyro(struct transport_tx *trans, struct link_device *dev) {
+static void send_gyro(struct transport_tx *trans, struct link_device *dev)
+{
   struct FloatRates gyro_float;
   RATES_FLOAT_OF_BFP(gyro_float, imu.gyro);
   pprz_msg_send_IMU_GYRO(trans, dev, AC_ID,
-      &gyro_float.p, &gyro_float.q, &gyro_float.r);
+                         &gyro_float.p, &gyro_float.q, &gyro_float.r);
 }
 
-static void send_mag_raw(struct transport_tx *trans, struct link_device *dev) {
+static void send_mag_raw(struct transport_tx *trans, struct link_device *dev)
+{
   pprz_msg_send_IMU_MAG_RAW(trans, dev, AC_ID,
-      &imu.mag_unscaled.x, &imu.mag_unscaled.y, &imu.mag_unscaled.z);
+                            &imu.mag_unscaled.x, &imu.mag_unscaled.y, &imu.mag_unscaled.z);
 }
 
-static void send_mag_scaled(struct transport_tx *trans, struct link_device *dev) {
+static void send_mag_scaled(struct transport_tx *trans, struct link_device *dev)
+{
   pprz_msg_send_IMU_MAG_SCALED(trans, dev, AC_ID,
-      &imu.mag.x, &imu.mag.y, &imu.mag.z);
+                               &imu.mag.x, &imu.mag.y, &imu.mag.z);
 }
 
-static void send_mag(struct transport_tx *trans, struct link_device *dev) {
+static void send_mag(struct transport_tx *trans, struct link_device *dev)
+{
   struct FloatVect3 mag_float;
   MAGS_FLOAT_OF_BFP(mag_float, imu.mag);
   pprz_msg_send_IMU_MAG(trans, dev, AC_ID,
-      &mag_float.x, &mag_float.y, &mag_float.z);
+                        &mag_float.x, &mag_float.y, &mag_float.z);
 }
-#endif // !USE_IMU_FLOAT
 
-#endif
+#endif /* PERIODIC_TELEMETRY */
 
 struct Imu imu;
-struct ImuFloat imuf;
 
-void imu_init(void) {
+void imu_init(void)
+{
 
 #ifdef IMU_POWER_GPIO
   gpio_setup_output(IMU_POWER_GPIO);
@@ -129,22 +124,18 @@ void imu_init(void) {
   VECT3_ASSIGN(imu.mag_neutral,   IMU_MAG_X_NEUTRAL,   IMU_MAG_Y_NEUTRAL,   IMU_MAG_Z_NEUTRAL);
 #else
 #if USE_MAGNETOMETER
-INFO("Magnetometer neutrals are set to zero, you should calibrate!")
+  INFO("Magnetometer neutrals are set to zero, you should calibrate!")
 #endif
   INT_VECT3_ZERO(imu.mag_neutral);
 #endif
 
   struct FloatEulers body_to_imu_eulers =
-    {IMU_BODY_TO_IMU_PHI, IMU_BODY_TO_IMU_THETA, IMU_BODY_TO_IMU_PSI};
+  {IMU_BODY_TO_IMU_PHI, IMU_BODY_TO_IMU_THETA, IMU_BODY_TO_IMU_PSI};
   orientationSetEulers_f(&imu.body_to_imu, &body_to_imu_eulers);
-#if USE_IMU_FLOAT
-  orientationSetEulers_f(&imuf.body_to_imu, &body_to_imu_eulers);
-#endif
 
 #if PERIODIC_TELEMETRY
   register_periodic_telemetry(DefaultPeriodic, "IMU_ACCEL", send_accel);
   register_periodic_telemetry(DefaultPeriodic, "IMU_GYRO", send_gyro);
-#if !USE_IMU_FLOAT
   register_periodic_telemetry(DefaultPeriodic, "IMU_ACCEL_RAW", send_accel_raw);
   register_periodic_telemetry(DefaultPeriodic, "IMU_ACCEL_SCALED", send_accel_scaled);
   register_periodic_telemetry(DefaultPeriodic, "IMU_ACCEL", send_accel);
@@ -154,44 +145,41 @@ INFO("Magnetometer neutrals are set to zero, you should calibrate!")
   register_periodic_telemetry(DefaultPeriodic, "IMU_MAG_RAW", send_mag_raw);
   register_periodic_telemetry(DefaultPeriodic, "IMU_MAG_SCALED", send_mag_scaled);
   register_periodic_telemetry(DefaultPeriodic, "IMU_MAG", send_mag);
-#endif // !USE_IMU_FLOAT
 #endif // DOWNLINK
 
   imu_impl_init();
 }
 
 
-void imu_SetBodyToImuPhi(float phi) {
+void imu_SetBodyToImuPhi(float phi)
+{
   struct FloatEulers body_to_imu_eulers;
   memcpy(&body_to_imu_eulers, orientationGetEulers_f(&imu.body_to_imu), sizeof(struct FloatEulers));
   body_to_imu_eulers.phi = phi;
   orientationSetEulers_f(&imu.body_to_imu, &body_to_imu_eulers);
-#if USE_IMU_FLOAT
-  orientationSetEulers_f(&imuf.body_to_imu, &body_to_imu_eulers);
-#endif
+  AbiSendMsgBODY_TO_IMU_QUAT(1, orientationGetQuat_f(&imu.body_to_imu));
 }
 
-void imu_SetBodyToImuTheta(float theta) {
+void imu_SetBodyToImuTheta(float theta)
+{
   struct FloatEulers body_to_imu_eulers;
   memcpy(&body_to_imu_eulers, orientationGetEulers_f(&imu.body_to_imu), sizeof(struct FloatEulers));
   body_to_imu_eulers.theta = theta;
   orientationSetEulers_f(&imu.body_to_imu, &body_to_imu_eulers);
-#if USE_IMU_FLOAT
-  orientationSetEulers_f(&imuf.body_to_imu, &body_to_imu_eulers);
-#endif
+  AbiSendMsgBODY_TO_IMU_QUAT(1, orientationGetQuat_f(&imu.body_to_imu));
 }
 
-void imu_SetBodyToImuPsi(float psi) {
+void imu_SetBodyToImuPsi(float psi)
+{
   struct FloatEulers body_to_imu_eulers;
   memcpy(&body_to_imu_eulers, orientationGetEulers_f(&imu.body_to_imu), sizeof(struct FloatEulers));
   body_to_imu_eulers.psi = psi;
   orientationSetEulers_f(&imu.body_to_imu, &body_to_imu_eulers);
-#if USE_IMU_FLOAT
-  orientationSetEulers_f(&imuf.body_to_imu, &body_to_imu_eulers);
-#endif
+  AbiSendMsgBODY_TO_IMU_QUAT(1, orientationGetQuat_f(&imu.body_to_imu));
 }
 
-void imu_SetBodyToImuCurrent(float set) {
+void imu_SetBodyToImuCurrent(float set)
+{
   imu.b2i_set_current = set;
 
   if (imu.b2i_set_current) {
@@ -203,23 +191,17 @@ void imu_SetBodyToImuCurrent(float set) {
       body_to_imu_eulers.phi += stateGetNedToBodyEulers_f()->phi;
       body_to_imu_eulers.theta += stateGetNedToBodyEulers_f()->theta;
       orientationSetEulers_f(&imu.body_to_imu, &body_to_imu_eulers);
-#if USE_IMU_FLOAT
-      orientationSetEulers_f(&imuf.body_to_imu, &body_to_imu_eulers);
-#endif
-    }
-    else {
+      AbiSendMsgBODY_TO_IMU_QUAT(1, orientationGetQuat_f(&imu.body_to_imu));
+    } else {
       // indicate that we couldn't set to current roll/pitch
       imu.b2i_set_current = FALSE;
     }
-  }
-  else {
+  } else {
     // reset to BODY_TO_IMU as defined in airframe file
     struct FloatEulers body_to_imu_eulers =
-      {IMU_BODY_TO_IMU_PHI, IMU_BODY_TO_IMU_THETA, IMU_BODY_TO_IMU_PSI};
+    {IMU_BODY_TO_IMU_PHI, IMU_BODY_TO_IMU_THETA, IMU_BODY_TO_IMU_PSI};
     orientationSetEulers_f(&imu.body_to_imu, &body_to_imu_eulers);
-#if USE_IMU_FLOAT
-    orientationSetEulers_f(&imuf.body_to_imu, &body_to_imu_eulers);
-#endif
+    AbiSendMsgBODY_TO_IMU_QUAT(1, orientationGetQuat_f(&imu.body_to_imu));
   }
 }
 
@@ -230,7 +212,7 @@ void WEAK imu_periodic(void)
 {
 }
 
-void WEAK imu_scale_gyro(struct Imu* _imu)
+void WEAK imu_scale_gyro(struct Imu *_imu)
 {
   RATES_COPY(_imu->gyro_prev, _imu->gyro);
   _imu->gyro.p = ((_imu->gyro_unscaled.p - _imu->gyro_neutral.p) * IMU_GYRO_P_SIGN *
@@ -241,7 +223,7 @@ void WEAK imu_scale_gyro(struct Imu* _imu)
                   IMU_GYRO_R_SENS_NUM) / IMU_GYRO_R_SENS_DEN;
 }
 
-void WEAK imu_scale_accel(struct Imu* _imu)
+void WEAK imu_scale_accel(struct Imu *_imu)
 {
   VECT3_COPY(_imu->accel_prev, _imu->accel);
   _imu->accel.x = ((_imu->accel_unscaled.x - _imu->accel_neutral.x) * IMU_ACCEL_X_SIGN *
@@ -254,7 +236,7 @@ void WEAK imu_scale_accel(struct Imu* _imu)
 
 #if defined IMU_MAG_X_CURRENT_COEF && defined IMU_MAG_Y_CURRENT_COEF && defined IMU_MAG_Z_CURRENT_COEF
 #include "subsystems/electrical.h"
-void WEAK imu_scale_mag(struct Imu* _imu)
+void WEAK imu_scale_mag(struct Imu *_imu)
 {
   struct Int32Vect3 mag_correction;
   mag_correction.x = (int32_t)(IMU_MAG_X_CURRENT_COEF * (float) electrical.current);
@@ -268,7 +250,7 @@ void WEAK imu_scale_mag(struct Imu* _imu)
                  IMU_MAG_Z_SIGN * IMU_MAG_Z_SENS_NUM) / IMU_MAG_Z_SENS_DEN;
 }
 #elif USE_MAGNETOMETER
-void WEAK imu_scale_mag(struct Imu* _imu)
+void WEAK imu_scale_mag(struct Imu *_imu)
 {
   _imu->mag.x = ((_imu->mag_unscaled.x - _imu->mag_neutral.x) * IMU_MAG_X_SIGN *
                  IMU_MAG_X_SENS_NUM) / IMU_MAG_X_SENS_DEN;
@@ -278,5 +260,5 @@ void WEAK imu_scale_mag(struct Imu* _imu)
                  IMU_MAG_Z_SENS_NUM) / IMU_MAG_Z_SENS_DEN;
 }
 #else
-void WEAK imu_scale_mag(struct Imu* _imu __attribute__((unused))) {}
+void WEAK imu_scale_mag(struct Imu *_imu __attribute__((unused))) {}
 #endif /* MAG_x_CURRENT_COEF */
