@@ -4,6 +4,9 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2_raw">
+      <define name="FAILSAFE_DESCENT_SPEED" value="0.5"/>
+      <configure name="USE_MAGNETOMETER" value="0"/>
+
       <subsystem name="telemetry" type="transparent_udp"/>
       <subsystem name="radio_control" type="datalink"/>
     </target>
@@ -13,30 +16,24 @@
       <subsystem name="radio_control" type="ppm"/>
     </target>
 
-    <define name="USE_SONAR" value="TRUE"/>
-
 	<!-- Subsystem section -->
     <subsystem name="motor_mixing"/>
     <subsystem name="actuators" type="ardrone2"/>
     <subsystem name="imu" type="ardrone2"/>
-    <subsystem name="gps" type="ublox"/>
+    <subsystem name="gps" type="datalink"/>
     <subsystem name="stabilization" type="int_quat"/>
     <subsystem name="ahrs" type="int_cmpl_quat"/>
     <subsystem name="ins" type="extended"/>
   </firmware>
 
   <modules main_freq="512">
-    <load name="gps_ubx_ucenter.xml"/>
-    <load name="send_imu_mag_current.xml"/>
-    <load name="file_logger.xml"/>
-    <!--  load name="../../sw/ext/ardrone2_vision/modules/Mjpeg/ViewVideo.xml"/-->
   </modules>
 
   <commands>
     <axis name="PITCH" failsafe_value="0"/>
     <axis name="ROLL" failsafe_value="0"/>
     <axis name="YAW" failsafe_value="0"/>
-    <axis name="THRUST" failsafe_value="3000"/>
+    <axis name="THRUST" failsafe_value="5760"/>
   </commands>
 
   <servos driver="Default">
@@ -103,11 +100,15 @@
     <!--define name="H_X" value="0.3892503"/>
     <define name="H_Y" value="0.0017972"/>
     <define name="H_Z" value="0.9211303"/ -->
+
+    <!-- Use GPS heading instead of magneto -->
+    <define name="USE_GPS_HEADING" value="1"/>
   </section>
 
   <section name="INS" prefix="INS_">
-    <define name="SONAR_MAX_RANGE" value="2.2"/>
-    <define name="SONAR_UPDATE_ON_AGL" value="TRUE"/>
+    <!-- Use GPS altitude measurments and set the R gain -->
+    <define name="USE_GPS_ALT" value="1"/>
+    <define name="VFF_R_GPS" value="0.01"/>
   </section>
 
   <section name="STABILIZATION_RATE" prefix="STABILIZATION_RATE_">
@@ -180,9 +181,9 @@
   </section>
 
   <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-    <define name="HOVER_KP" value="1652"/>
-    <define name="HOVER_KI" value="1365"/>
-    <define name="HOVER_KD" value="195"/>
+    <define name="HOVER_KP" value="283"/>
+    <define name="HOVER_KI" value="13"/>
+    <define name="HOVER_KD" value="82"/>
     <define name="NOMINAL_HOVER_THROTTLE" value="0.655"/>
     <define name="ADAPT_THROTTLE_ENABLED" value="FALSE"/>
   </section>
