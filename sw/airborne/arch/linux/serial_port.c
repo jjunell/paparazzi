@@ -9,6 +9,12 @@
 #include <string.h>
 #include <unistd.h>
 
+// IUCLC flag translates upper case to lower case (actually needed here?)
+// but is not in POSIX and OSX
+#ifndef IUCLC
+#define IUCLC 0
+#endif
+
 //#define TRACE(type,fmt,args...)    fprintf(stderr, fmt, args)
 #define TRACE(type,fmt,args...)
 #define TRACE_ERROR 1
@@ -69,6 +75,9 @@ int  serial_port_open_raw(struct SerialPort *me, const char *device, speed_t spe
   /* local modes  */
   me->cur_termios.c_lflag &= ~(ISIG | ICANON | IEXTEN | ECHO | FLUSHO | PENDIN);
   me->cur_termios.c_lflag |= NOFLSH;
+  /* output modes */
+  me->cur_termios.c_oflag &=~(OPOST|ONLCR|OCRNL|ONOCR|ONLRET);
+
   if (cfsetispeed(&me->cur_termios, speed)) {
     TRACE(TRACE_ERROR, "%s, set term speed failed: %s (%d)\n", device, strerror(errno), errno);
     close(me->fd);

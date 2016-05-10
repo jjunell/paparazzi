@@ -20,20 +20,20 @@
  *
  */
 
-/** \file follow.c
- *  \brief Follow a certain AC ID
- *
+/** @file follow.c
+ *  @brief Follow a certain AC ID.
+ * Only for rotorcraft firmware.
  */
 
 #include "multi/follow.h"
-#include "generated/flight_plan.h"
 #include "generated/airframe.h"
+#include "generated/flight_plan.h"
+
+#include "subsystems/navigation/waypoints.h"
 
 #include "state.h"
-#include "subsystems/ins/ins_int.h"
-#include "navigation.h"
-#include "messages.h"
-#include "dl_protocol.h"
+#include "pprzlink/messages.h"
+#include "pprzlink/dl_protocol.h"
 
 #ifndef FOLLOW_OFFSET_X
 #define FOLLOW_OFFSET_X 0.0
@@ -61,7 +61,7 @@ void follow_change_wp(unsigned char *buffer)
   new_pos.z = DL_REMOTE_GPS_ecef_z(buffer);
 
   // Translate to ENU
-  enu_of_ecef_point_i(&enu, &ins_impl.ltp_def, &new_pos);
+  enu_of_ecef_point_i(&enu, &state.ned_origin_i, &new_pos);
   INT32_VECT3_SCALE_2(enu, enu, INT32_POS_OF_CM_NUM, INT32_POS_OF_CM_DEN);
 
   // TODO: Add the angle to the north
@@ -74,5 +74,5 @@ void follow_change_wp(unsigned char *buffer)
   // TODO: Remove the angle to the north
 
   // Move the waypoint
-  VECT3_COPY(waypoints[FOLLOW_WAYPOINT_ID], enu);
+  waypoint_set_enu_i(FOLLOW_WAYPOINT_ID, &enu);
 }

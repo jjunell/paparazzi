@@ -171,9 +171,9 @@ class canvas_gauge = fun ?(config=[]) canvas_group x y ->
   (*let props = (text_props@[`ANCHOR `EAST]) in*)
 
   let _ = GnoCanvas.ellipse ~x1:r2 ~y1:r2 ~x2:(-.r2) ~y2:(-.r2)
-    ~props:[`NO_FILL_COLOR; `OUTLINE_COLOR "grey"; `WIDTH_UNITS 6.]  root in
+    ~props:[`NO_FILL_COLOR; `OUTLINE_COLOR "grey"; `WIDTH_PIXELS 6]  root in
   let points = [|0.;-.r1;0.;-.r1+.3.|] in
-  let props = [`WIDTH_UNITS 2.; `FILL_COLOR "red"] in
+  let props = [`WIDTH_PIXELS 2; `FILL_COLOR "red"] in
   let _ = GnoCanvas.line ~points ~props root in
   let il = GnoCanvas.line ~points ~props root in
   let () = il#affine_absolute (affine_pos_and_angle 0. 0. (-. Latlong.pi /. 3.)) in
@@ -325,13 +325,15 @@ class canvas_mplayer = fun ?(config=[]) canvas_group x y ->
   and height = float_of_string (PC.get_prop "height" config "240.") in
   let socket = GWindow.socket () in
   let group = GnoCanvas.group ~x ~y canvas_group in
-  let _item = GnoCanvas.widget ~width ~height ~widget:socket group in
+  let item = GnoCanvas.widget ~width ~height ~widget:socket group in
 
 object
   method tag = "Mplayer"
   method item = (group :> movable_item)
   method edit = fun (pack:GObj.widget -> unit) -> ()
-  method update = fun (value:string) -> ()
+  method update = fun (value:string) ->
+    let zoom = try float_of_string value with _ -> 1. in
+    item#set [`WIDTH (width /. zoom); `HEIGHT (height /. zoom)]
   method config = fun () ->
     [ PC.property "video_feed" video_feed;
       PC.float_property "width" width;
@@ -351,13 +353,15 @@ class canvas_plugin = fun ?(config=[]) canvas_group x y ->
   and height = float_of_string (PC.get_prop "height" config "240.") in
   let socket = GWindow.socket () in
   let group = GnoCanvas.group ~x ~y canvas_group in
-  let _item = GnoCanvas.widget ~width ~height ~widget:socket group in
+  let item = GnoCanvas.widget ~width ~height ~widget:socket group in
 
 object
   method tag = "Plugin"
   method item = (group :> movable_item)
   method edit = fun (pack:GObj.widget -> unit) -> ()
-  method update = fun (value:string) -> ()
+  method update = fun (value:string) ->
+    let zoom = try float_of_string value with _ -> 1. in
+    item#set [`WIDTH (width /. zoom); `HEIGHT (height /. zoom) ]
   method config = fun () ->
     [ PC.property "command" command;
       PC.float_property "width" width;

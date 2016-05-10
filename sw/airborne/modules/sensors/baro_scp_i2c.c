@@ -13,7 +13,7 @@
 #include "led.h"
 
 #include "mcu_periph/uart.h"
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "subsystems/datalink/downlink.h"
 
 #ifndef SENSOR_SYNC_SEND
@@ -102,7 +102,7 @@ void baro_scp_event(void)
       baro_scp_pressure *= 25;
 
       float pressure = (float) baro_scp_pressure;
-      AbiSendMsgBARO_ABS(BARO_SCP_SENDER_ID, &pressure);
+      AbiSendMsgBARO_ABS(BARO_SCP_SENDER_ID, pressure);
 #ifdef SENSOR_SYNC_SEND
       DOWNLINK_SEND_SCP_STATUS(DefaultChannel, DefaultDevice, &baro_scp_pressure, &baro_scp_temperature);
 #endif

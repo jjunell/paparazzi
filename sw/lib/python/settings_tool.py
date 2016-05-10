@@ -3,14 +3,16 @@
 from __future__ import absolute_import, print_function
 
 from ivy.std_api import *
-import os
 import logging
 import sys
+import pprz_env
 
-sys.path.append(os.getenv("PAPARAZZI_HOME") + "/sw/lib/python")
+sys.path.append(pprz_env.PAPARAZZI_SRC + "/sw/lib/python")
+
 from settings_xml_parse import PaparazziACSettings
 
 _SHOW_IVY_MSGS_ = False
+
 
 class IvySettingsInterface(PaparazziACSettings):
     def __init__(self, ac_ids):
@@ -66,7 +68,7 @@ class IvySettingsInterface(PaparazziACSettings):
 
         # starting the bus
         logging.getLogger('Ivy').setLevel(logging.WARN)
-        IvyStart("")
+        IvyStart(pprz_env.IVY_BUS)
         IvyBindMsg(self.OnValueMsg, "(^.* DL_VALUE .*)")
         IvyBindMsg(self.OnSettingMsg, "dl DL_SETTING (.*)")
 

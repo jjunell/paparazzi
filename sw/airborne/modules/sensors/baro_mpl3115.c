@@ -32,7 +32,7 @@
 
 //Messages
 #include "mcu_periph/uart.h"
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "subsystems/datalink/downlink.h"
 
 
@@ -64,13 +64,13 @@ void baro_mpl3115_read_event(void)
   mpl3115_event(&baro_mpl);
   if (baro_mpl.data_available) {
     float pressure = (float)baro_mpl.pressure / (1 << 2);
-    AbiSendMsgBARO_ABS(BARO_MPL3115_SENDER_ID, &pressure);
+    AbiSendMsgBARO_ABS(BARO_MPL3115_SENDER_ID, pressure);
     float temp = (float)baro_mpl.pressure / 16.0f;
-    AbiSendMsgTEMPERATURE(BARO_MPL3115_SENDER_ID, &temp);
+    AbiSendMsgTEMPERATURE(BARO_MPL3115_SENDER_ID, temp);
 #ifdef SENSOR_SYNC_SEND
     DOWNLINK_SEND_MPL3115_BARO(DefaultChannel, DefaultDevice, &baro_mpl.pressure, &baro_mpl.temperature, &baro_mpl.alt);
 #endif
-    baro_mpl.data_available = FALSE;
+    baro_mpl.data_available = false;
   }
 }
 

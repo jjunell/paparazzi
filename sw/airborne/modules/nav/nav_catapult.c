@@ -34,8 +34,6 @@
  *            GoTo(climb)
  */
 
-
-
 #include "generated/airframe.h"
 #include "state.h"
 #include "subsystems/datalink/downlink.h"
@@ -49,11 +47,11 @@
 #include "subsystems/imu.h"
 
 #include "mcu_periph/uart.h"
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "subsystems/datalink/datalink.h"
 
 
-static bool_t nav_catapult_armed = FALSE;
+static bool nav_catapult_armed = false;
 static uint16_t nav_catapult_launch = 0;
 
 #ifndef NAV_CATAPULT_ACCELERATION_THRESHOLD
@@ -96,6 +94,7 @@ static float nav_catapult_y = 0;
 
 void nav_catapult_highrate_module(void)
 {
+  bool reset_lauch;
   // Only run when
   if (nav_catapult_armed) {
     if (nav_catapult_launch < nav_catapult_heading_delay * NAV_CATAPULT_HIGHRATE_MODULE_FREQ) {
@@ -109,10 +108,11 @@ void nav_catapult_highrate_module(void)
       struct Int32Vect3 accel_meas_body;
       struct Int32RMat *body_to_imu_rmat = orientationGetRMat_i(&imu.body_to_imu);
       int32_rmat_transp_vmult(&accel_meas_body, body_to_imu_rmat, &imu.accel);
-      if (ACCEL_FLOAT_OF_BFP(accel_meas_body.x)  < (nav_catapult_acceleration_threshold * 9.81))
+      reset_lauch = ACCEL_FLOAT_OF_BFP(accel_meas_body.x)  < (nav_catapult_acceleration_threshold * 9.81);
 #else
-      if (launch != 1)
+      reset_lauch = launch != 1;
 #endif
+      if (reset_lauch)
       {
         nav_catapult_launch = 0;
       }
@@ -131,18 +131,18 @@ void nav_catapult_highrate_module(void)
 //###############################################################################################
 // Code that runs in 4Hz Nav
 
-bool_t nav_catapult_setup(void)
+bool nav_catapult_setup(void)
 {
 
-  nav_catapult_armed = TRUE;
+  nav_catapult_armed = true;
   nav_catapult_launch = 0;
 
-  return FALSE;
+  return false;
 }
 
 
 
-bool_t nav_catapult_run(uint8_t _to, uint8_t _climb)
+bool nav_catapult_run(uint8_t _to, uint8_t _climb)
 {
   float alt = WaypointAlt(_climb);
 
@@ -191,15 +191,15 @@ bool_t nav_catapult_run(uint8_t _to, uint8_t _climb)
   }
 
 
-  return TRUE;
+  return true;
 
 }
 
-bool_t nav_select_touch_down(uint8_t _td)
+bool nav_select_touch_down(uint8_t _td)
 {
   WaypointX(_td) = stateGetPositionEnu_f()->x;
   WaypointY(_td) = stateGetPositionEnu_f()->y;
   WaypointAlt(_td) = stateGetPositionUtm_f()->alt;
-  return FALSE;
+  return false;
 }
 

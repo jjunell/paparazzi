@@ -2,10 +2,9 @@
 #include "mcu.h"
 #include "mcu_periph/sys_time.h"
 #include "led.h"
-#include "interrupt_hw.h"
 #include "mcu_periph/usb_serial.h"
 
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "subsystems/datalink/downlink.h"
 
 static inline void main_init(void);

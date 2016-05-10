@@ -29,9 +29,9 @@
 
 #include "mcu.h"
 #include "mcu_periph/sys_time.h"
-#include "mcu_periph/uart.h"
 #include "led.h"
 
+#define DATALINK_C
 #include "subsystems/datalink/downlink.h"
 
 #include "subsystems/sensors/baro.h"
@@ -39,9 +39,31 @@
 #define ABI_C
 #include "subsystems/abi.h"
 
+#include "test_baro_board_imu.h"
+
 static inline void main_init(void);
 static inline void main_periodic_task(void);
 static inline void main_event_task(void);
+
+
+
+__attribute__((weak)) void test_baro_board_imu_init(void)
+{
+  /* Optionally, to be overriden by board specific code */
+}
+
+
+__attribute__((weak)) void test_baro_board_imu_periodic_task(void)
+{
+  /* Optionally, to be overriden by board specific code */
+}
+
+
+__attribute__((weak)) void test_baro_board_imu_event_task(void)
+{
+  /* Optionally, to be overriden by board specific code */
+}
+
 
 #ifndef BARO_PERIODIC_FREQUENCY
 #define BARO_PERIODIC_FREQUENCY 50
@@ -78,9 +100,9 @@ int main(void)
   return 0;
 }
 
-static void pressure_abs_cb(uint8_t __attribute__((unused)) sender_id, const float *pressure)
+static void pressure_abs_cb(uint8_t __attribute__((unused)) sender_id, float pressure)
 {
-  float p = *pressure;
+  float p = pressure;
   float foo = 42.;
   DOWNLINK_SEND_BARO_RAW(DefaultChannel, DefaultDevice, &p, &foo);
 }
@@ -89,6 +111,8 @@ static inline void main_init(void)
 {
   mcu_init();
   sys_time_register_timer((1. / PERIODIC_FREQUENCY), NULL);
+  downlink_init();
+  test_baro_board_imu_init();
   baro_init();
 
   baro_tid = sys_time_register_timer(1. / BARO_PERIODIC_FREQUENCY, NULL);
@@ -100,9 +124,12 @@ static inline void main_periodic_task(void)
 {
   LED_PERIODIC();
   RunOnceEvery(256, {DOWNLINK_SEND_ALIVE(DefaultChannel, DefaultDevice, 16, MD5SUM);});
+  test_baro_board_imu_periodic_task();
 }
 
 static inline void main_event_task(void)
 {
+  mcu_event();
+  test_baro_board_imu_event_task();
   BaroEvent();
 }

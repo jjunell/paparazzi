@@ -45,6 +45,7 @@ class message_field :
 
 class expression :
     ?extra_functions:(string * (string list -> string)) list ->
+    ?sender:string ->
     Expr_syntax.expression ->
       value
 
@@ -104,9 +105,11 @@ class canvas_variable_setting_item :
 class canvas_video_plugin_item :
   Xml.xml list ->
   Papget_renderer.t ->
+  GData.adjustment ->
   object
     inherit canvas_item_type
     method config : unit -> Xml.xml
+    method update_zoom : string -> unit
 (*
 
     method connect : unit -> unit
@@ -114,7 +117,6 @@ class canvas_video_plugin_item :
     method edit : unit -> unit
     method event : GnoCanvas.item_event -> bool
     method renderer : Papget_renderer.t
-    method update : string -> unit
     method xy : float * float
 *)
   end

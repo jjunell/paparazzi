@@ -23,17 +23,14 @@
 #include "mcu.h"
 #include "mcu_periph/sys_time.h"
 #include "mcu_periph/gpio.h"
-#include "interrupt_hw.h"
 
 #ifndef TEST_GPIO1
 #define TEST_GPIO1 GPIOB,GPIO17
 #endif
-PRINT_CONFIG_VAR(TEST_GPIO1)
 
 #ifndef TEST_GPIO2
 #define TEST_GPIO2 GPIOB,GPIO23
 #endif
-PRINT_CONFIG_VAR(TEST_GPIO2)
 
 
 /*

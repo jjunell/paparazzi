@@ -14,7 +14,7 @@
 
       <dl_settings NAME="attitude">
         <dl_setting MAX="25000" MIN="000" STEP="250" VAR="h_ctl_roll_pgain" shortname="roll_pgain" module="stabilization/stabilization_attitude"/>
-        <dl_setting MAX="1" MIN="0" STEP="0.05" VAR="h_ctl_roll_max_setpoint" shortname="max_roll" param="H_CTL_ROLL_MAX_SETPOINT"/>
+        <dl_setting MAX="60" MIN="0" STEP="1." VAR="h_ctl_roll_max_setpoint" shortname="max_roll" param="H_CTL_ROLL_MAX_SETPOINT" unit="rad" alt_unit="deg"/>
         <dl_setting MAX="25000" MIN="0" STEP="250" VAR="h_ctl_pitch_pgain" shortname="pitch_pgain" param="H_CTL_PITCH_PGAIN"/>
         <dl_setting MAX="50000" MIN="0" STEP="10" VAR="h_ctl_pitch_dgain" shortname="pitch_dgain" param="H_CTL_PITCH_DGAIN"/>
         <dl_setting MAX="5000" MIN="0" STEP="100" VAR="h_ctl_elevator_of_roll" shortname="elevator_of_roll" param="H_CTL_ELEVATOR_OF_ROLL"/>
@@ -59,6 +59,8 @@
         <dl_setting MAX="2" MIN="1" STEP="1" VAR="nav_mode"/>
         <dl_setting MAX="5" MIN="-5" STEP="0.5" VAR="nav_climb"/>
         <dl_setting MAX="15" MIN="-15" STEP="1" VAR="fp_pitch"/>
+        <dl_setting MAX="1.0" MIN="0.0" STEP="0.01" VAR="fp_throttle"/>
+        <dl_setting MAX="5.0" MIN="-5.0" STEP="0.1" VAR="fp_climb"/>
         <dl_setting MAX="50" MIN="-50" STEP="5" VAR="nav_shift" module="firmwares/fixedwing/nav" handler="IncreaseShift" shortname="inc. shift"/>
         <dl_setting MAX="50" MIN="5" STEP="0.5" VAR="nav_ground_speed_setpoint" shortname="ground speed"/>
         <dl_setting MAX="0.2" MIN="0" STEP="0.01" VAR="nav_ground_speed_pgain" shortname="ground speed pgain"/>

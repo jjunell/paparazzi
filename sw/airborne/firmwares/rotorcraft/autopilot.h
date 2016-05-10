@@ -50,25 +50,28 @@
 #define AP_MODE_RC_DIRECT         14  // Safety Pilot Direct Commands for helicopter direct control
 #define AP_MODE_CARE_FREE_DIRECT  15
 #define AP_MODE_FORWARD           16
+#define AP_MODE_MODULE            17
+#define AP_MODE_FLIP              18
+#define AP_MODE_GUIDED            19
 
 extern uint8_t autopilot_mode;
 extern uint8_t autopilot_mode_auto2;
-extern bool_t autopilot_motors_on;
-extern bool_t autopilot_in_flight;
-extern bool_t kill_throttle;
-extern bool_t autopilot_rc;
+extern bool autopilot_motors_on;
+extern bool autopilot_in_flight;
+extern bool kill_throttle;
+extern bool autopilot_rc;
 
-extern bool_t autopilot_power_switch;
+extern bool autopilot_power_switch;
 
 extern void autopilot_init(void);
 extern void autopilot_periodic(void);
 extern void autopilot_on_rc_frame(void);
 extern void autopilot_set_mode(uint8_t new_autopilot_mode);
-extern void autopilot_set_motors_on(bool_t motors_on);
-extern void autopilot_check_in_flight(bool_t motors_on);
+extern void autopilot_set_motors_on(bool motors_on);
+extern void autopilot_check_in_flight(bool motors_on);
 
-extern bool_t autopilot_ground_detected;
-extern bool_t autopilot_detect_ground_once;
+extern bool autopilot_ground_detected;
+extern bool autopilot_detect_ground_once;
 
 extern uint16_t autopilot_flight_time;
 
@@ -84,18 +87,6 @@ extern uint16_t autopilot_flight_time;
 #define MODE_AUTO2 AP_MODE_NAV
 #endif
 
-
-#define THRESHOLD_1_PPRZ (MIN_PPRZ / 2)
-#define THRESHOLD_2_PPRZ (MAX_PPRZ / 2)
-
-#define AP_MODE_OF_PPRZ(_rc, _mode) {    \
-    if      (_rc > THRESHOLD_2_PPRZ)     \
-      _mode = autopilot_mode_auto2;      \
-    else if (_rc > THRESHOLD_1_PPRZ)     \
-      _mode = MODE_AUTO1;                \
-    else                                 \
-      _mode = MODE_MANUAL;               \
-  }
 
 #define autopilot_KillThrottle(_kill) { \
     if (_kill)                          \
@@ -121,6 +112,15 @@ extern uint16_t autopilot_flight_time;
  *  Limit thrust and/or yaw depending of the in_flight
  *  and motors_on flag status
  */
+#ifdef ROTORCRAFT_IS_HELI
+#define SetRotorcraftCommands(_cmd, _in_flight,  _motor_on) { \
+    commands[COMMAND_ROLL] = _cmd[COMMAND_ROLL];                \
+    commands[COMMAND_PITCH] = _cmd[COMMAND_PITCH];              \
+    commands[COMMAND_YAW] = _cmd[COMMAND_YAW];                  \
+    commands[COMMAND_THRUST] = _cmd[COMMAND_THRUST];            \
+  }
+#else
+
 #ifndef ROTORCRAFT_COMMANDS_YAW_ALWAYS_ENABLED
 #define SetRotorcraftCommands(_cmd, _in_flight,  _motor_on) { \
     if (!(_in_flight)) { _cmd[COMMAND_YAW] = 0; }               \
@@ -139,6 +139,7 @@ extern uint16_t autopilot_flight_time;
     commands[COMMAND_THRUST] = _cmd[COMMAND_THRUST];            \
   }
 #endif
+#endif
 
 /** Z-acceleration threshold to detect ground in m/s^2 */
 #ifndef THRESHOLD_GROUND_DETECT
@@ -152,14 +153,15 @@ static inline void DetectGroundEvent(void)
     struct NedCoor_f *accel = stateGetAccelNed_f();
     if (accel->z < -THRESHOLD_GROUND_DETECT ||
         accel->z > THRESHOLD_GROUND_DETECT) {
-      autopilot_ground_detected = TRUE;
-      autopilot_detect_ground_once = FALSE;
+      autopilot_ground_detected = true;
+      autopilot_detect_ground_once = false;
     }
   }
 }
 
 #include "subsystems/settings.h"
 
+/* try to make sure that we don't write to flash while flying */
 static inline void autopilot_StoreSettings(float store)
 {
   if (kill_throttle && store) {
@@ -168,9 +170,53 @@ static inline void autopilot_StoreSettings(float store)
   }
 }
 
+static inline void autopilot_ClearSettings(float clear)
+{
+  if (kill_throttle && clear) {
+    settings_clear_flag = clear;
+    settings_clear();
+  }
+}
+
 #if DOWNLINK
-#include "subsystems/datalink/transport.h"
+#include "pprzlink/pprzlink_transport.h"
 extern void send_autopilot_version(struct transport_tx *trans, struct link_device *dev);
 #endif
+
+/** Set position and heading setpoints in GUIDED mode.
+ * @param x North position (local NED frame) in meters.
+ * @param y East position (local NED frame) in meters.
+ * @param z Down position (local NED frame) in meters.
+ * @param heading Setpoint in radians.
+ * @return TRUE if setpoint was set (currently in AP_MODE_GUIDED)
+ */
+extern bool autopilot_guided_goto_ned(float x, float y, float z, float heading);
+
+/** Set position and heading setpoints wrt. current position in GUIDED mode.
+ * @param dx Offset relative to current north position (local NED frame) in meters.
+ * @param dy Offset relative to current east position (local NED frame) in meters.
+ * @param dz Offset relative to current down position (local NED frame) in meters.
+ * @param dyaw Offset relative to current heading setpoint in radians.
+ * @return TRUE if setpoint was set (currently in AP_MODE_GUIDED)
+ */
+extern bool autopilot_guided_goto_ned_relative(float dx, float dy, float dz, float dyaw);
+
+/** Set position and heading setpoints wrt. current position AND heading in GUIDED mode.
+ * @param dx relative position (body frame, forward) in meters.
+ * @param dy relative position (body frame, right) in meters.
+ * @param dz relative position (body frame, down) in meters.
+ * @param dyaw Offset relative to current heading setpoint in radians.
+ * @return TRUE if setpoint was set (currently in AP_MODE_GUIDED)
+ */
+extern bool autopilot_guided_goto_body_relative(float dx, float dy, float dz, float dyaw);
+
+/** Set velocity and heading setpoints in GUIDED mode.
+ * @param vx North velocity (local NED frame) in meters/sec.
+ * @param vy East velocity (local NED frame) in meters/sec.
+ * @param vz Down velocity (local NED frame) in meters/sec.
+ * @param heading Setpoint in radians.
+ * @return TRUE if setpoint was set (currently in AP_MODE_GUIDED)
+ */
+extern bool autopilot_guided_move_ned(float vx, float vy, float vz, float heading);
 
 #endif /* AUTOPILOT_H */

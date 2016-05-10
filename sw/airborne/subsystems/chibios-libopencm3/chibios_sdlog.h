@@ -29,7 +29,8 @@
 #define CHIBIOS_SDLOG_H
 
 #include "ff.h"
-#include "mcu_periph/link_device.h"
+#include "subsystems/chibios-libopencm3/sdLog.h"
+#include "pprzlink/pprzlink_device.h"
 
 /*
  what to be done  :
@@ -38,26 +39,26 @@
  * when power failure event occurs, close all logs
  */
 
-extern FIL pprzLogFile;
+extern FileDes pprzLogFile;
 
-#if LOG_PROCESS_STATE
+#if FLIGHTRECORDER_SDLOG
 // if activated, will log all process states
-extern FIL processLogFile;
+extern FileDes flightRecorderLogFile;
 #endif
 
-extern bool_t chibios_logInit(const bool_t binaryFile);
-extern void chibios_logFinish(void);
+extern bool chibios_logInit(void);
+extern void chibios_logFinish(bool flush);
 
 struct chibios_sdlog {
+  FileDes *file;
   /** Generic device interface */
   struct link_device device;
 };
 
 extern struct chibios_sdlog chibios_sdlog;
 
-/** Paparazzi datalink API */
-#define SDLOGCheckFreeSpace(_x) (true)
-#define SDLOGTransmit(_x) sdLogWriteByte(&pprzLogFile, _x)
-#define SDLOGSendMessage() {}
+/** init chibios_sdlog structure
+ */
+extern void chibios_sdlog_init(struct chibios_sdlog *sdlog, FileDes *file);
 
 #endif

@@ -32,7 +32,7 @@
 #include "subsystems/abi.h"
 
 #include "mcu_periph/uart.h"
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "subsystems/datalink/downlink.h"
 
 #if PERIODIC_TELEMETRY
@@ -160,7 +160,7 @@ void ms45xx_i2c_init(void)
                               MS45XX_I2C_PERIODIC_PERIOD, 0);
 
 #if PERIODIC_TELEMETRY
-  register_periodic_telemetry(DefaultPeriodic, "AIRSPEED_MS45XX", ms45xx_downlink);
+  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_AIRSPEED_MS45XX, ms45xx_downlink);
 #endif
 }
 
@@ -202,15 +202,15 @@ void ms45xx_i2c_event(void)
       ms45xx.temperature = ((uint32_t)temp_raw * 2000) / 2047 - 500;
 
       // Send differential pressure via ABI
-      AbiSendMsgBARO_DIFF(MS45XX_SENDER_ID, &ms45xx.diff_pressure);
+      AbiSendMsgBARO_DIFF(MS45XX_SENDER_ID, ms45xx.diff_pressure);
       // Send temperature as float in deg Celcius via ABI
       float temp = ms45xx.temperature / 10.0f;
-      AbiSendMsgTEMPERATURE(MS45XX_SENDER_ID, &temp);
+      AbiSendMsgTEMPERATURE(MS45XX_SENDER_ID, temp);
 
       // Compute airspeed
       ms45xx.airspeed = sqrtf(Max(ms45xx.diff_pressure * ms45xx.airspeed_scale, 0));
 #if USE_AIRSPEED_MS45XX
-      stateSetAirspeed_f(&ms45xx.airspeed);
+      stateSetAirspeed_f(ms45xx.airspeed);
 #endif
       if (ms45xx.sync_send) {
         ms45xx_downlink(&(DefaultChannel).trans_tx, &(DefaultDevice).device);

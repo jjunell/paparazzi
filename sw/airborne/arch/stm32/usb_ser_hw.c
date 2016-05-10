@@ -35,14 +35,18 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/stm32/desig.h>
 
 #include "mcu_periph/usb_serial.h"
 
+#include "mcu_periph/sys_time_arch.h"
 
 /* Max packet size for USB transfer */
 #define MAX_PACKET_SIZE          64
 /* Max fifo size for storing data */
-#define VCOM_FIFO_SIZE          128
+#define VCOM_FIFO_SIZE          256
+
+#define TX_TIMEOUT_CNT 20 //TODO, make dynamic with event period
 
 typedef struct {
   int         head;
@@ -57,13 +61,11 @@ static fifo_t txfifo;
 static fifo_t rxfifo;
 
 void fifo_init(fifo_t *fifo, uint8_t *buf);
-bool_t fifo_put(fifo_t *fifo, uint8_t c);
-bool_t fifo_get(fifo_t *fifo, uint8_t *pc);
+bool fifo_put(fifo_t *fifo, uint8_t c);
+bool fifo_get(fifo_t *fifo, uint8_t *pc);
 int  fifo_avail(fifo_t *fifo);
 int  fifo_free(fifo_t *fifo);
-inline char *get_dev_unique_id(char *serial_no);
-
-
+int tx_timeout; // tmp work around for usbd_ep_stall_get from, this function does not always seem to work
 
 usbd_device *my_usbd_dev;
 
@@ -215,31 +217,6 @@ static const char *usb_strings[] = {
   serial_no,
 };
 
-/**
- * Serial is 96bit so 12bytes so 12 hexa numbers, or 24 decimal + termination character
- */
-inline char *get_dev_unique_id(char *s)
-{
-#if defined STM32F4
-  volatile uint8_t *unique_id = (volatile uint8_t *)0x1FFF7A10;
-#else
-  volatile uint8_t *unique_id = (volatile uint8_t *)0x1FFFF7E8;
-#endif
-  int i;
-
-  // Fetch serial number from chip's unique ID
-  for (i = 0; i < 24; i += 2) {
-    s[i] = ((*unique_id >> 4) & 0xF) + '0';
-    s[i + 1] = (*unique_id++ & 0xF) + '0';
-  }
-  for (i = 0; i < 24; i++)
-    if (s[i] > '9') {
-      s[i] += 'A' - '9' - 1;
-    }
-  // add termination character
-  s[24] = '\0';
-  return s;
-}
 
 /*
  *  Buffer to be used for control requests.
@@ -309,12 +286,12 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 }
 
 // store USB connection status
-static bool_t usb_connected;
+static bool usb_connected;
 
 // use suspend callback to detect disconnect
 static void suspend_cb(void)
 {
-  usb_connected = FALSE;
+  usb_connected = false;
 }
 
 /**
@@ -335,7 +312,7 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
                                  cdcacm_control_request);
 
   // use config and suspend callback to detect connect
-  usb_connected = TRUE;
+  usb_connected = true;
   usbd_register_suspend_callback(usbd_dev, suspend_cb);
 }
 
@@ -349,7 +326,7 @@ void fifo_init(fifo_t *fifo, uint8_t *buf)
 
 
 
-bool_t fifo_put(fifo_t *fifo, uint8_t c)
+bool fifo_put(fifo_t *fifo, uint8_t c)
 {
   int next;
 
@@ -357,23 +334,23 @@ bool_t fifo_put(fifo_t *fifo, uint8_t c)
   next = (fifo->head + 1) % VCOM_FIFO_SIZE;
   if (next == fifo->tail) {
     // full
-    return FALSE;
+    return false;
   }
 
   fifo->buf[fifo->head] = c;
   fifo->head = next;
 
-  return TRUE;
+  return true;
 }
 
 
-bool_t fifo_get(fifo_t *fifo, uint8_t *pc)
+bool fifo_get(fifo_t *fifo, uint8_t *pc)
 {
   int next;
 
   // check if FIFO has data
   if (fifo->head == fifo->tail) {
-    return FALSE;
+    return false;
   }
 
   next = (fifo->tail + 1) % VCOM_FIFO_SIZE;
@@ -381,7 +358,7 @@ bool_t fifo_get(fifo_t *fifo, uint8_t *pc)
   *pc = fifo->buf[fifo->tail];
   fifo->tail = next;
 
-  return TRUE;
+  return true;
 }
 
 
@@ -413,9 +390,16 @@ int VCOM_putchar(int c)
     if (VCOM_check_free_space(2)) {
       // if yes, add char
       fifo_put(&txfifo, c);
+      /*c is not send until VCOM_send_message is called. This only happens in three cases:
+       * i)   after a timeout (giving the chance to add more data to the fifo before sending)
+       * ii)  if the fifo is filled, at which point the data is send immidiately
+       * iii) VCOM_send_message is called externally
+      */
+      tx_timeout = TX_TIMEOUT_CNT; // set timeout
     } else {
       // less than 2 bytes available, add byte and send data now
       fifo_put(&txfifo, c);
+      sys_time_usleep(10); //far from optimal, increase fifo size to prevent this problem
       VCOM_send_message();
     }
     return c;
@@ -439,7 +423,7 @@ int VCOM_getchar(void)
  * Checks if buffer free in VCOM buffer
  *  @returns TRUE if len bytes are free
  */
-bool_t VCOM_check_free_space(uint8_t len)
+bool VCOM_check_free_space(uint16_t len)
 {
   return (fifo_free(&txfifo) >= len ? TRUE : FALSE);
 }
@@ -458,8 +442,18 @@ int VCOM_check_available(void)
  * VCOM_event() should be called from main/module event function
  */
 void VCOM_event(void)
-{
+{  
+  if (tx_timeout == 1) { // send any remaining bytes that still hang arround in the tx fifo, after a timeout
+    if (fifo_avail(&txfifo)) {
+      VCOM_send_message();
+    }
+  }
+  if (tx_timeout > 0) {
+    tx_timeout--;
+  }
+
   usbd_poll(my_usbd_dev);
+
 }
 
 /**
@@ -469,6 +463,7 @@ void VCOM_event(void)
 void VCOM_send_message(void)
 {
   if (usb_connected) {
+
     uint8_t buf[MAX_PACKET_SIZE];
     uint8_t i;
     for (i = 0; i < MAX_PACKET_SIZE; i++) {
@@ -476,7 +471,15 @@ void VCOM_send_message(void)
         break;
       }
     }
+
+    // wait until the line is free to write
+    // this however seems buggy, sometimes data gets lost even for the stall to clear
+    // so do not call this function continously without additional safe guards
+    while (usbd_ep_stall_get(my_usbd_dev, 0x82)) {};
+
+    // send the data over usb
     usbd_ep_write_packet(my_usbd_dev, 0x82, buf, i);
+
   }
 }
 
@@ -497,19 +500,42 @@ struct usb_serial_periph usb_serial;
 
 // Functions for the generic device API
 static int usb_serial_check_free_space(struct usb_serial_periph *p __attribute__((unused)),
-                                       uint8_t len)
+                                       long *fd __attribute__((unused)),
+                                       uint16_t len)
 {
   return (int)VCOM_check_free_space(len);
 }
 
-static void usb_serial_transmit(struct usb_serial_periph *p __attribute__((unused)), uint8_t byte)
+static void usb_serial_transmit(struct usb_serial_periph *p __attribute__((unused)),
+                                long fd __attribute__((unused)),
+                                uint8_t byte)
 {
   VCOM_putchar(byte);
 }
 
-static void usb_serial_send(struct usb_serial_periph *p __attribute__((unused)))
+static void usb_serial_transmit_buffer(struct usb_serial_periph *p __attribute__((unused)),
+                                       long fd __attribute__((unused)),
+                                       uint8_t *data, uint16_t len)
+{
+  int i;
+  for (i = 0; i < len; i++) {
+    VCOM_putchar(data[i]);
+  }
+}
+
+static void usb_serial_send(struct usb_serial_periph *p __attribute__((unused)), long fd __attribute__((unused)))
 {
   VCOM_send_message();
+}
+
+static int usb_serial_char_available(struct usb_serial_periph *p __attribute__((unused)))
+{
+  return VCOM_check_available();
+}
+
+static uint8_t usb_serial_getch(struct usb_serial_periph *p __attribute__((unused)))
+{
+  return (uint8_t)(VCOM_getchar());
 }
 
 void VCOM_init(void)
@@ -529,7 +555,7 @@ void VCOM_init(void)
   rcc_periph_clock_enable(RCC_OTGFS);
 
   /* Get serial number */
-  get_dev_unique_id(serial_no);
+  desig_get_unique_id_as_string(serial_no, 25);
 
   /* usb driver init*/
   my_usbd_dev = usbd_init(&otgfs_usb_driver, &dev, &config,
@@ -539,11 +565,17 @@ void VCOM_init(void)
   usbd_register_set_config_callback(my_usbd_dev, cdcacm_set_config);
 
   // disconnected by default
-  usb_connected = FALSE;
+  usb_connected = false;
 
   // Configure generic device
   usb_serial.device.periph = (void *)(&usb_serial);
   usb_serial.device.check_free_space = (check_free_space_t) usb_serial_check_free_space;
-  usb_serial.device.transmit = (transmit_t) usb_serial_transmit;
+  usb_serial.device.put_byte = (put_byte_t) usb_serial_transmit;
+  usb_serial.device.put_buffer = (put_buffer_t) usb_serial_transmit_buffer;
   usb_serial.device.send_message = (send_message_t) usb_serial_send;
+  usb_serial.device.char_available = (char_available_t) usb_serial_char_available;
+  usb_serial.device.get_byte = (get_byte_t) usb_serial_getch;
+
+  tx_timeout = 0;
 }
+

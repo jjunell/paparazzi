@@ -28,10 +28,18 @@ type icon = {
   width: int
 }
 
-val icon_fixedwing_template : icon
-val icon_flyingwing_template : icon
-val icon_rotorcraft_template : icon
-val icon_home_template : icon
+val icon_fixedwing_template    : icon
+val icon_flyingwing_template   : icon
+val icon_rotorcraft_template   : icon
+val icon_quadrotor_template    : icon
+val icon_hexarotor_template    : icon
+val icon_octorotor_template    : icon
+val icon_quadrotor_x_template  : icon
+val icon_hexarotor_x_template  : icon
+val icon_octorotor_x_template  : icon
+val icon_quadrotor_xi_template : icon
+val icon_home_template         : icon
+val icon_intruder_template     : icon
 
 class widget :
   ?color : string ->

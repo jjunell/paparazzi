@@ -18,18 +18,30 @@
   <!--periodic fun="gps_periodic_check()" freq="1." autorun="TRUE"/-->
   <!--event fun="GpsEvent(on_gps_solution)"/-->
   <makefile target="ap">
+    <configure name="UBX_GPS_PORT" default="$(GPS_PORT)" case="upper|lower"/>
+    <configure name="UBX_GPS_BAUD" default="$(GPS_BAUD)"/>
     <file name="gps.c" dir="subsystems"/>
     <file name="gps_ubx.c" dir="subsystems/gps"/>
     <define name="USE_GPS"/>
-    <!-- only for fixedwings -->
-    <!--define name="GPS_USE_LATLONG"/-->
+    <configure name="GPS_PORT" case="upper|lower"/>
+    <define name="USE_$(UBX_GPS_PORT_UPPER)"/>
+    <define name="UBX_GPS_LINK" value="$(UBX_GPS_PORT_LOWER)"/>
+    <define name="$(UBX_GPS_PORT_UPPER)_BAUD" value="$(UBX_GPS_BAUD)"/>
+    <configure name="GPS_LED" default="none"/>
+    <define name="GPS_LED" value="$(GPS_LED)" cond="ifneq ($(GPS_LED),none)"/>
     <raw>
+      ifdef SECONDARY_GPS
+      ifneq (,$(findstring $(SECONDARY_GPS), ublox))
+      # this is the secondary GPS
+      ap.CFLAGS += -DGPS_SECONDARY_TYPE_H=\"subsystems/gps/gps_ubx.h\"
+      ap.CFLAGS += -DSECONDARY_GPS=gps_ubx
+      else
       ap.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_ubx.h\"
-      ap.CFLAGS += -DUSE_$(GPS_PORT) -D$(GPS_PORT)_BAUD=$(GPS_BAUD)
-      ap.CFLAGS += -DUSE_GPS -DGPS_LINK=$(GPS_PORT)
-      GPS_LED ?= none
-      ifneq ($(GPS_LED),none)
-        ap.CFLAGS += -DGPS_LED=$(GPS_LED)
+      ap.CFLAGS += -DPRIMARY_GPS=gps_ubx
+      endif
+      else
+      # plain old single GPS usage
+      ap.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_ubx.h\"
       endif
     </raw>
   </makefile>
@@ -37,18 +49,13 @@
     <file name="gps.c" dir="subsystems"/>
     <file name="gps_sim_nps.c" dir="subsystems/gps"/>
     <define name="USE_GPS"/>
-    <raw>
-      nps.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_sim_nps.h\"
-    </raw>
+    <define name="GPS_TYPE_H" value="subsystems/gps/gps_sim_nps.h" type="string"/>
   </makefile>
-  <makefile target="sim|jsbsim">
+  <makefile target="sim">
+    <file name="gps.c" dir="subsystems"/>
     <file name="gps_sim.c" dir="subsystems/gps"/>
     <define name="USE_GPS"/>
-    <define name="GPS_USE_LATLONG"/>
-    <raw>
-      sim.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_sim.h\"
-      jsbsim.CFLAGS += -DGPS_TYPE_H=\"subsystems/gps/gps_sim.h\"
-    </raw>
+    <define name="GPS_TYPE_H" value="subsystems/gps/gps_sim.h" type="string"/>
   </makefile>
 </module>
 

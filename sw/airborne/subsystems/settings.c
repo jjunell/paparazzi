@@ -35,13 +35,15 @@ struct PersistentSettings pers_settings;
  * Also settings still need a variable,
  * pure function call not possible yet.
  */
-bool_t settings_store_flag;
+bool settings_store_flag;
+
+bool settings_clear_flag;
 
 
 void settings_init(void)
 {
 #if USE_PERSISTENT_SETTINGS
-  if (persistent_read((uint32_t)&pers_settings, sizeof(struct PersistentSettings))) {
+  if (persistent_read((void *)&pers_settings, sizeof(struct PersistentSettings))) {
     return;  // return -1 ?
   }
   /* from generated/settings.h */
@@ -58,13 +60,31 @@ int32_t settings_store(void)
   if (settings_store_flag) {
     /* from generated/settings.h */
     persistent_settings_store();
-    if (!persistent_write((uint32_t)&pers_settings, sizeof(struct PersistentSettings))) {
+    if (!persistent_write((void *)&pers_settings, sizeof(struct PersistentSettings))) {
       /* persistent write was successful */
-      settings_store_flag = TRUE;
+      settings_store_flag = true;
       return 0;
     }
   }
 #endif
-  settings_store_flag = FALSE;
+  settings_store_flag = false;
+  return -1;
+}
+
+/** clear all persistent settings from flash
+ * @return 0 on success
+ */
+int32_t settings_clear(void)
+{
+#if USE_PERSISTENT_SETTINGS
+  if (settings_clear_flag) {
+    if (!persistent_clear()) {
+      /* clearing all persistent settings was successful */
+      settings_clear_flag = true;
+      return 0;
+    }
+  }
+#endif
+  settings_clear_flag = false;
   return -1;
 }

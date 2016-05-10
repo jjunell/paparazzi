@@ -34,7 +34,6 @@
 
 #include "std.h"
 #include "LPC21xx.h"
-#include "interrupt_hw.h"
 #include "armVIC.h"
 #include BOARD_CONFIG
 
@@ -199,7 +198,7 @@ __attribute__((always_inline)) static inline void SpiTransmit(struct spi_periph 
 {
   // when all byte are sent, continue until tx_idx reach input_length
   // needed when input_length is bigger than output_length
-  uint8_t max_idx = Max(t->output_length, t->input_length);
+  uint16_t max_idx = Max(t->output_length, t->input_length);
   while (p->tx_idx_buf < max_idx && bit_is_set(((sspRegs_t *)(p->reg_addr))->sr, TNF)) {
     if (p->tx_idx_buf < t->output_length) {
       if (t->dss == SPIDss8bit) {
@@ -491,7 +490,7 @@ void spi1_arch_init(void)
 #endif
 
 
-bool_t spi_submit(struct spi_periph *p, struct spi_transaction *t)
+bool spi_submit(struct spi_periph *p, struct spi_transaction *t)
 {
   //unsigned cpsr;
 
@@ -500,7 +499,7 @@ bool_t spi_submit(struct spi_periph *p, struct spi_transaction *t)
   if (idx >= SPI_TRANSACTION_QUEUE_LEN) { idx = 0; }
   if (idx == p->trans_extract_idx) {
     t->status = SPITransFailed;
-    return FALSE; /* queue full */
+    return false; /* queue full */
   }
   t->status = SPITransPending;
 
@@ -522,7 +521,7 @@ bool_t spi_submit(struct spi_periph *p, struct spi_transaction *t)
   //VICIntEnable = VIC_BIT(*vic);
   //restoreIRQ(cpsr);                                   // restore global interrupts
   enableIRQ();
-  return TRUE;
+  return true;
 }
 
 
@@ -561,20 +560,20 @@ void spi_slave_unselect(uint8_t slave)
   SpiSlaveUnselect(slave);
 }
 
-bool_t spi_lock(struct spi_periph *p, uint8_t slave)
+bool spi_lock(struct spi_periph *p, uint8_t slave)
 {
   uint8_t *vic = (uint8_t *)(p->init_struct);
   VICIntEnClear = VIC_BIT(*vic);
   if (slave < 254 && p->suspend == 0) {
     p->suspend = slave + 1; // 0 is reserved for unlock state
     VICIntEnable = VIC_BIT(*vic);
-    return TRUE;
+    return true;
   }
   VICIntEnable = VIC_BIT(*vic);
-  return FALSE;
+  return false;
 }
 
-bool_t spi_resume(struct spi_periph *p, uint8_t slave)
+bool spi_resume(struct spi_periph *p, uint8_t slave)
 {
   uint8_t *vic = (uint8_t *)(p->init_struct);
   VICIntEnClear = VIC_BIT(*vic);
@@ -585,10 +584,10 @@ bool_t spi_resume(struct spi_periph *p, uint8_t slave)
       SpiStart(p, p->trans[p->trans_extract_idx]);
     }
     VICIntEnable = VIC_BIT(*vic);
-    return TRUE;
+    return true;
   }
   VICIntEnable = VIC_BIT(*vic);
-  return FALSE;
+  return false;
 }
 
 #endif /* SPI_MASTER */
@@ -677,12 +676,12 @@ void spi1_slave_arch_init(void)
 #endif
 
 /** Register one (and only one) transaction to use spi as slave */
-bool_t spi_slave_register(struct spi_periph *p, struct spi_transaction *t)
+bool spi_slave_register(struct spi_periph *p, struct spi_transaction *t)
 {
 
   if (p->trans_insert_idx >= 1) {
     t->status = SPITransFailed;
-    return FALSE;
+    return false;
   }
   t->status = SPITransPending;
   p->status = SPIIdle;
@@ -698,18 +697,18 @@ bool_t spi_slave_register(struct spi_periph *p, struct spi_transaction *t)
 
   SpiSetDataSize(p, t->dss);
 
-  return TRUE;
+  return true;
 }
 
-bool_t spi_slave_wait(struct spi_periph *p)
+bool spi_slave_wait(struct spi_periph *p)
 {
   if (p->trans_insert_idx == 0) {
     // no transaction registered
-    return FALSE;
+    return false;
   }
   // Start waiting
   SpiSlaveStart(p, p->trans[p->trans_extract_idx]);
-  return TRUE;
+  return true;
 }
 
 #endif /* SPI_SLAVE */
