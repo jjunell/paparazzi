@@ -28,15 +28,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "mcu_periph/uart.h"
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #ifndef FILE_RLACT_PATH
-#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
-//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
+//#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
+#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
 #endif
 
 //*************** DECLARE VARIABLES *****************//
@@ -72,8 +72,13 @@ int8_t hbflag;      //hitbounds flag
     char filename_Vfcn[200];
 	char filename_kv[200];
 	
+// reading in value function file
+	FILE *file_Vin;
+	char filename_Vin[200];
+	
 // for execution of RL in paparazzi
-const int16_t del = 80;// distance to move in each action
+struct EnuCoor_f my_wp;
+const int16_t del = 1;// distance to move in each action
 static int32_t pass;
 
 // policy decisions - just random for now
@@ -106,7 +111,9 @@ printf("init1\n");
 	
 	act= 0; 
 	pass=0;
-	eps=0;
+	eps=100;  // full greedy eps=100
+
+	my_wp.z = NAV_DEFAULT_ALT;
 
 printf("init2\n");
 	srand(time(NULL)); //initialize random number generator just once
@@ -121,10 +128,23 @@ printf("init3\n");
 	file_regw = fopen(filename_regen,"w");
 	fclose(file_regw);
 
+printf("init4\n");
+	//initialize V to the values from given file.
+	sprintf(filename_Vin, "%sVin.txt", FILE_RLACT_PATH);
+	file_Vin = fopen(filename_Vin,"r");
+	    if(file_Vin==NULL){printf("Error! 'Vin.txt' NULL. No Value Function updates written to file.\n");}
+    else{
+    for(i=0;i<ndim;i++){
+    	for(j=0;j<nstates;j++){ 
+    	(void)fscanf(file_Vin, "%lf", &V[j][i]);
+    	}}// end loops to read in Vin
+    } //end security check
+    fclose(file_Vin);
+    printf("init5\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
-bool_t rlact_run(uint8_t wpa, uint8_t wpb){
+bool rlact_run(uint8_t wpa, uint8_t wpb){
 pass++;
 // printf("pass = %d\n",pass);
 
@@ -134,8 +154,9 @@ if(pass==1){
 	state_curr = rand() % nstates; //Random state between 0-35;
 	drow = state_curr % ndim; // remainder = #increments to move in y from home
 	dcol = (int)state_curr/ndim;  // rounded down = #increments to move in x from home
-	waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
-	waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
+	my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
+	my_wp.y = waypoint_get_y(WP_p00) + drow*del;
+	waypoint_set_enu(wpb, &my_wp);
 	
 	//reopen regeneration file and save the first random generation state
 	file_reg = fopen(filename_regen,"a");
@@ -151,7 +172,7 @@ else{
 
 	file_reg = fopen(filename_regen,"a");
 
-	printf("state = %d, visit# %d, Vold= %.4f, ",state_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
+	printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
 	
 	// give rewards for current state and calculate next state
 	switch(state_curr){
@@ -230,9 +251,6 @@ else{
 		}
     } // switch statement - reward function
     
-    //override stay in same nectar state:
-    ns_curr=0; ns_next=0;
-    
 /* Now with reward and next state calculated:
    1) update value function for current state using belman eqn
    2) take action in paparazzi sim/IRL
@@ -271,59 +289,80 @@ if(pass==11 || pass==101 || pass==151 || pass==201 || pass==251 || pass==301 || 
     
     	//execute in paparazzi sim/IRL
 	switch (act){
-	    case 0: /* no movement */
-	    waypoints[wpb].x = waypoints[wpa].x;    
-		waypoints[wpb].y = waypoints[wpa].y;
+	        case 0: /* no movement */
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa);
+	        waypoint_set_enu(wpb, &my_wp);
+
 		break;
 		case 1: /* north */
-		waypoints[wpb].x = waypoints[wpa].x;    
-		waypoints[wpb].y = waypoints[wpa].y + del;
+        	my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[0];
 		break;
 		case 2: /* east */
-		waypoints[wpb].x = waypoints[wpa].x + del;
-		waypoints[wpb].y = waypoints[wpa].y;
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[1];
 		break;
 		case 3: /* south */
-		waypoints[wpb].x = waypoints[wpa].x;
-		waypoints[wpb].y = waypoints[wpa].y - del;
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[2];
 		break;      
 		case 4: /* west */
-		waypoints[wpb].x = waypoints[wpa].x - del;
-		waypoints[wpb].y = waypoints[wpa].y;
+		my_wp.x = waypoint_get_x(wpa) - del;
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[3];
 		break;    
 		case 5: /* northwest */
-		waypoints[wpb].x = waypoints[wpa].x - del;    
-		waypoints[wpb].y = waypoints[wpa].y + del;
+		my_wp.x = waypoint_get_x(wpa) - del;    
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[4];
 		break;
 		case 6: /* northeast */
-		waypoints[wpb].x = waypoints[wpa].x + del;
-		waypoints[wpb].y = waypoints[wpa].y + del;
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[5];
 		break;
 		case 7: /* southeast */
-		waypoints[wpb].x = waypoints[wpa].x + del;
-		waypoints[wpb].y = waypoints[wpa].y - del;
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[6];
 		break;      
 		case 8: /* southwest */
-		waypoints[wpb].x = waypoints[wpa].x - del;
-		waypoints[wpb].y = waypoints[wpa].y - del;
+		my_wp.x = waypoint_get_x(wpa) - del;
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		++ka[7];
 		break;
 		case 9:  /* special hive/flower random regeneration */
 		drow = state_next % ndim; // remainder = #increments to move in y from home
 		dcol = (int)state_next/ndim;  // rounded down = #increments to move in x from home
-		waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
-		waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
+		my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
+		my_wp.y = waypoint_get_y(WP_p00) + drow*del;
+		waypoint_set_enu(wpb, &my_wp);
+
 		break;
 		default: /* no movement */
-	    waypoints[wpb].x = waypoints[wpa].x;
-		waypoints[wpb].y = waypoints[wpa].y;
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
 		state_next = state_curr; ns_next = ns_curr;
 		printf("default action stay still: no valid action taken\n");
 		break;
@@ -384,6 +423,7 @@ int8_t chooseact(uint16_t state_curr_sf2, uint8_t ns_curr_sf2 , uint16_t eps_sf2
 //Declare up above instead of inside.  and give them different names so they are not shadowed?
 // question: why don't I have to bring in V[36][6], or nact, or ndim?
 int8_t index_sf2[8]={-1};  //for some reason I cannot declare this above.
+
 
 //initialize
 a = 0;

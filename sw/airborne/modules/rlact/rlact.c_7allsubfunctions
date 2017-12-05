@@ -26,8 +26,9 @@
 #include "generated/airframe.h"
 #include <time.h>
 #include <stdlib.h>
+#include <stdio.h>
 
-#include "messages.h"
+#include "pprzlink/messages.h"
 #include "mcu_periph/uart.h"
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
@@ -54,7 +55,8 @@ int8_t hbflag;      //hitbounds flag
 	double reward;
 
 // for execution of RL in paparazzi
-const int16_t del = 80;// distance to move in each action
+struct EnuCoor_f my_wp;
+const int16_t del = 1;// distance to move in each action
 static int32_t pass;
 
 // policy decisions - just random for now
@@ -89,14 +91,15 @@ printf("init1\n");
 	pass=0;
 	eps=0;
 
+	my_wp.z = NAV_DEFAULT_ALT;
+
 printf("init2\n");
 	srand(time(NULL)); //initialize random number generator just once
 printf("init3\n");
-
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
-bool_t rlact_run(uint8_t wpa, uint8_t wpb){
+bool rlact_run(uint8_t wpa, uint8_t wpb){
 pass++;
 // printf("pass = %d\n",pass);
 
@@ -106,13 +109,15 @@ if(pass==1){
 	state_curr = rand() % nstates; //Random state between 0-35;
 	drow = state_curr % ndim; // remainder = #increments to move in y from home
 	dcol = (int)state_curr/ndim;  // rounded down = #increments to move in x from home
-	waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
-	waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
+	my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
+	my_wp.y = waypoint_get_y(WP_p00) + drow*del;
+	waypoint_set_enu(wpb, &my_wp);
+		printf("first pass. del = %d\n",del);
 	}
 else{
 	//choose initial action
 	act = chooseact(state_curr, ns_curr, eps);
-	printf("state = %d, visit# %d, Vold= %.4f, ",state_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
+	printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
 	
 	// give rewards for current state and calculate next state
 	switch(state_curr){
@@ -150,7 +155,7 @@ else{
 			}
 		  }
 		  else {  //if ep-greedy (eps>0)
-		  	state_next = rand() % nstates; 
+		  	state_next = rand() % nstates;
 		  }
 		break;
 		
@@ -171,6 +176,7 @@ else{
 		if(hbflag){
 			reward = -1.0;
 			state_next = state_curr;
+			printf("\n hitbound with act = %d; therefore stay still\n",act);
 			act = 0;  // special action for not moving; (not really a chosen action, but needed for implemention in paparazzi.)
 		}
 		else{
@@ -204,69 +210,80 @@ else{
 
     	//execute in paparazzi sim/IRL
 	switch (act){
-	    case 0: /* no movement */
-	    waypoints[wpb].x = waypoints[wpa].x;    
-		waypoints[wpb].y = waypoints[wpa].y;
+	        case 0: /* no movement */
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa);
+	        waypoint_set_enu(wpb, &my_wp);
 		printf("act = %d\n",act);
 		break;
 		case 1: /* north */
-		waypoints[wpb].x = waypoints[wpa].x;    
-		waypoints[wpb].y = waypoints[wpa].y + del;
-		printf("act = %d\n",act);
+        	my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[0];
 		break;
 		case 2: /* east */
-		waypoints[wpb].x = waypoints[wpa].x + del;
-		waypoints[wpb].y = waypoints[wpa].y;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[1];
 		break;
 		case 3: /* south */
-		waypoints[wpb].x = waypoints[wpa].x;
-		waypoints[wpb].y = waypoints[wpa].y - del;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[2];
 		break;      
 		case 4: /* west */
-		waypoints[wpb].x = waypoints[wpa].x - del;
-		waypoints[wpb].y = waypoints[wpa].y;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa) - del;
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[3];
 		break;    
 		case 5: /* northwest */
-		waypoints[wpb].x = waypoints[wpa].x - del;    
-		waypoints[wpb].y = waypoints[wpa].y + del;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa) - del;    
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[4];
 		break;
 		case 6: /* northeast */
-		waypoints[wpb].x = waypoints[wpa].x + del;
-		waypoints[wpb].y = waypoints[wpa].y + del;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+	 			printf("act = %d\n",act);
 		++ka[5];
 		break;
 		case 7: /* southeast */
-		waypoints[wpb].x = waypoints[wpa].x + del;
-		waypoints[wpb].y = waypoints[wpa].y - del;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[6];
 		break;      
 		case 8: /* southwest */
-		waypoints[wpb].x = waypoints[wpa].x - del;
-		waypoints[wpb].y = waypoints[wpa].y - del;
-		printf("act = %d\n",act);
+		my_wp.x = waypoint_get_x(wpa) - del;
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
 		++ka[7];
 		break;
-		case 9:  /* special hive random regeneration */
+		case 9:  /* special hive/flower random regeneration */
 		drow = state_next % ndim; // remainder = #increments to move in y from home
 		dcol = (int)state_next/ndim;  // rounded down = #increments to move in x from home
-		waypoints[wpb].x = waypoints[WP_p00].x + dcol*del;
-		waypoints[wpb].y = waypoints[WP_p00].y + drow*del;
+		my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
+		my_wp.y = waypoint_get_y(WP_p00) + drow*del;
+		waypoint_set_enu(wpb, &my_wp);
 		printf("act = %d\n",act);
 		break;
 		default: /* no movement */
-	    waypoints[wpb].x = waypoints[wpa].x;
-		waypoints[wpb].y = waypoints[wpa].y;
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
 		state_next = state_curr; ns_next = ns_curr;
 		printf("default action stay still: no valid action taken\n");
 		break;
@@ -338,8 +355,8 @@ else{ //ep_greedy or full greedy depending on eps value
 		for(a= 1; a < nact+1; a++){
   			hbflag = hitsbounds(state_curr_sf2, a);
 			if(hbflag){
-				Vact[a] = 0.0/0.0; //if hits bounds, not an option for movement
-				} 
+				Vact[(a-1)] = 0.0/0.0; //if hits bounds, not an option for movement
+				}
 			else{
 				switch(a){
 				case 1 : Vact[0] = V[state_curr_sf2+1][ns_curr_sf2]; break;			//north
@@ -357,7 +374,8 @@ else{ //ep_greedy or full greedy depending on eps value
 //find max value of Vact
 max = Vact[0];
 for(a=1; a <nact; a++){
-	if(Vact[a]>max){ max=Vact[a]; }
+	if(isnan(max)){max = Vact[a]; /*printf("\nmax is nan, new max= %f\n",max);*/}
+	else if(Vact[a]>max){ max=Vact[a]; }
 }
 //find all the elements that have max value
 i=0;
