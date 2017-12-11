@@ -23,15 +23,15 @@
 #define RLACT_H
 
 #include "std.h"
+#include <stdint.h>
 #include "firmwares/rotorcraft/navigation.h"
 
 // external variable declarations
 
-
 // macro defines
-#define IncrementWaypointx(_wp1) ({waypoints[_wp1].x = waypoints[_wp1].x + 80; FALSE; })
-#define IncrementWaypointy(_wp1) ({waypoints[_wp1].y = waypoints[_wp1].y + 80; FALSE; })
-#define RunLinesWP(_wp1,_wp2,rlact) ({waypoints[_wp2].x = waypoints[_wp1].x + rlact*80; FALSE; }) 
+//#define IncrementWaypointx(_wp1) ({waypoint_set_xy_i(_wp1, waypoint_get_x(_wp1) + 1, waypoint_get_y(_wp1)); FALSE; })
+//#define IncrementWaypointy(_wp1) ({waypoint_set_xy_i(_wp1, waypoint_get_x(_wp1), waypoint_get_y(_wp1)) + 1; FALSE; })
+//#define RunLinesWP(_wp1,_wp2,rlact) ({waypoints[_wp2].x = waypoints[_wp1].x + rlact*80; FALSE; })
 
 //******* FUNCTIONS ********//
 void rlact_init(void);

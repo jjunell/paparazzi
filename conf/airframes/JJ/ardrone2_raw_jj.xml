@@ -4,6 +4,8 @@
 
   <firmware name="rotorcraft">
     <target name="ap" board="ardrone2">
+      <configure name="USE_BARO_BOARD" value="FALSE"/>
+      <configure name="PREFIX" value="/opt/arm-2012.03/bin/arm-none-linux-gnueabi"/>
     </target>
 
     <target name="nps" board="pc">
@@ -12,7 +14,7 @@
 
     <define name="USE_SONAR" value="TRUE"/>
 
-	<!-- module section -->
+	<!-- Subsystem section -->
     <module name="telemetry" type="transparent_udp"/>
     <module name="radio_control" type="datalink"/>
     <module name="motor_mixing"/>
@@ -21,17 +23,27 @@
     <!-- gps: "ublox" or change to "sirf" for usage with parrot flight recorder -->
     <module name="gps" type="ublox"/>
     <module name="stabilization" type="int_quat"/>
-    <module name="ahrs" type="int_cmpl_quat"/>
+    <!--module name="ahrs" type="int_cmpl_quat"/-->
     <module name="ins" type="extended"/>
   </firmware>
 
   <modules main_freq="512">
     <module name="bat_voltage_ardrone2"/>
+    <!-- remove the gps_ubx_ucenter module if you use the sirf gps (flight recorder) -->
     <module name="gps" type="ubx_ucenter"/>
     <module name="send_imu_mag_current"/>
     <module name="air_data"/>
     <module name="geo_mag"/>
     <module name="rlact"/>
+    <!--module name="logger_file"/-->
+    <module name="video_thread">
+    </module>
+
+    <module name="video_rtp_stream">
+      <define name="VIEWVIDEO_CAMERA" value="front_camera"/>
+      <define name="VIEWVIDEO_DOWNSIZE_FACTOR" value="4"/>
+      <define name="VIEWVIDEO_QUALITY_FACTOR" value="60"/>
+    </module>
   </modules>
 
   <commands>
@@ -92,11 +104,6 @@
   <!-- local magnetic field -->
   <!-- http://wiki.paparazziuav.org/wiki/Subsystem/ahrs#Local_Magnetic_Field -->
   <section name="AHRS" prefix="AHRS_">
-    <!-- values used if no GPS fix, on 3D fix is update by geo_mag module -->
-    <!-- Toulouse -->
-    <define name="H_X" value="0.513081"/>
-    <define name="H_Y" value="-0.00242783"/>
-    <define name="H_Z" value="0.858336"/>
     <!-- Delft -->
     <!--define name="H_X" value="0.3892503"/>
     <define name="H_Y" value="0.0017972"/>

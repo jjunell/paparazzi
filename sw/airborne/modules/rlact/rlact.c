@@ -35,8 +35,8 @@
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #ifndef FILE_RLACT_PATH
-//#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
-#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
+#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
+//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
 #endif
 
 //*************** DECLARE VARIABLES *****************//
@@ -71,10 +71,6 @@ int8_t hbflag;      //hitbounds flag
     char filename_act[200];
     char filename_Vfcn[200];
 	char filename_kv[200];
-	
-// reading in value function file
-	FILE *file_Vin;
-	char filename_Vin[200];
 	
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
@@ -111,7 +107,7 @@ printf("init1\n");
 	
 	act= 0; 
 	pass=0;
-	eps=100;  // full greedy eps=100
+	eps=0;
 
 	my_wp.z = NAV_DEFAULT_ALT;
 
@@ -127,20 +123,6 @@ printf("init3\n");
 	fclose(file_actw);
 	file_regw = fopen(filename_regen,"w");
 	fclose(file_regw);
-
-printf("init4\n");
-	//initialize V to the values from given file.
-	sprintf(filename_Vin, "%sVin.txt", FILE_RLACT_PATH);
-	file_Vin = fopen(filename_Vin,"r");
-	    if(file_Vin==NULL){printf("Error! 'Vin.txt' NULL. No Value Function updates written to file.\n");}
-    else{
-    for(i=0;i<ndim;i++){
-    	for(j=0;j<nstates;j++){ 
-    	(void)fscanf(file_Vin, "%lf", &V[j][i]);
-    	}}// end loops to read in Vin
-    } //end security check
-    fclose(file_Vin);
-    printf("init5\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
@@ -250,6 +232,9 @@ else{
 			}
 		}
     } // switch statement - reward function
+    
+    //override stay in same nectar state:
+    ns_curr=0; ns_next=0;
     
 /* Now with reward and next state calculated:
    1) update value function for current state using belman eqn

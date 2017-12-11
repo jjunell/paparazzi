@@ -78,7 +78,7 @@ int8_t hbflag;      //hitbounds flag
 	
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
-const int16_t del = 3;// distance to move in each action
+const int16_t del = 1;// distance to move in each action
 static int32_t pass;
 
 // policy decisions - just random for now
@@ -111,7 +111,7 @@ printf("init1\n");
 	
 	act= 0; 
 	pass=0;
-	eps=100;  //between 0-100
+	eps=100;  // full greedy eps=100
 
 	my_wp.z = NAV_DEFAULT_ALT;
 
