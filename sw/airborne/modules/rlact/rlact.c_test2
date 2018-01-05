@@ -44,7 +44,7 @@
 int8_t drow, dcol;
 int8_t state_curr, state_next;
 int8_t ns_curr, ns_next;//current nectar state 0-5 (base 0)
-const int8_t nns = 5;  //last nectar state (base 0)
+const int8_t nns = 5;  //maximum nectar state (base 0)
 const int8_t ndim = 6; //number of elements in a dimension = 6 (nrows,ncols, nns)
 const int8_t nstates=36; //=ndim*ndim
 
