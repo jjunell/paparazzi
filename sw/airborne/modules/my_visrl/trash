@@ -1,0 +1,252 @@
+================
+manan_test
+===============
+
+long sumpixels_box(unsigned char *startpointer , int row1, int col1, int row2, int col2, int rowwidth)
+{
+    /* Sums the red values of each pixel in a box in the image.
+     * startpointed -- pointer to the start of image data
+     * row1, col1,row2, col2 -- top left and bottom right corners of the
+     *                          box
+     * rowwidth -- the pixel width of each row
+     */
+    long sumred = 0;
+    unsigned char *curpx; // pointers to pixels in row
+    unsigned char *curby; // pointer to the byte in the pixels
+
+    for(int rowi = row1; rowi < row2; rowi++) {
+        for(int coli = col1; coli < col2; coli++) {
+            curpx = get_pointertopix(startpointer, rowi, coli, rowwidth);
+            for(int bytei = 0; bytei < 3; bytei++) {
+                curby = curpx + bytei;
+                if (bytei == 2) {
+                    sumred += (long)*curby;
+                }
+                else {
+                    // *curby = 0;
+                }
+            }
+        }
+    }
+
+    // printf("Sumpixels init \n");
+    return sumred;
+}
+
+uint32_t count_redpixels(struct BmpStruct *bmpstructPtr)
+{
+    uint32_t redcounter = 0;
+    unsigned char *curpx, *pxr, *pxg, *pxb;
+    uint16_t height = bmpstructPtr->height;
+    uint16_t width = bmpstructPtr->width;
+    unsigned char *bmp_buffer = bmpstructPtr->buffer;
+
+    int colvalsum;
+    float redfrac;
+
+    for(int rowi = 0; rowi < height; rowi++) {
+        for(int coli = 0; coli < width; coli++) {
+            curpx = get_pointertopix(bmp_buffer, rowi, coli, width);
+            pxr = curpx;
+            pxg = curpx + 1;
+            pxb = curpx + 2;
+            colvalsum = *pxr + *pxg + *pxb;
+            redfrac = (float) *pxr / (float) colvalsum;
+            if (redfrac > 0.75) {
+                redcounter++;
+            }
+        }
+    }
+    // printf("Redcount: %6d \n", redcounter);
+    return redcounter;
+}
+
+
+
+uint8_t cv_task(void)
+{
+    struct MemoryStruct chunk;
+    chunk.memory = malloc(1);
+    chunk.size = 0;
+
+    struct BmpStruct bmp;
+
+    curl2mem(&chunk);
+
+    get_bmp((unsigned char*)chunk.memory, chunk.size, &bmp);
+    // free up memory of downloaded jpeg
+    free(chunk.memory);
+
+    curredcount = count_redpixels(&bmp);
+    // free up memory of the bmp
+    free(bmp.buffer);
+
+
+    return 0;
+}
+
+
+uint8_t cv_task_sumblues(void)
+{
+    struct MemoryStruct chunk;
+    chunk.memory = malloc(1);
+    chunk.size = 0;
+
+    struct BmpStruct bmp;
+
+    curl2mem(&chunk);
+
+    get_bmp((unsigned char*)chunk.memory, chunk.size, &bmp);
+    // free up memory of downloaded jpeg
+    free(chunk.memory);
+
+    uint32_t bluesum = 0;
+    unsigned long curinc = 2;
+    unsigned char *curby;// = bmp.buffer;
+    // printf("%d %d",
+    while (curinc <= bmp.size) {
+        curby = bmp.buffer + curinc;
+        bluesum += *curby;
+        curinc = curinc + 3;
+    }
+    printf("BlueSum: %d",bluesum);
+    // free up memory of the bmp
+    free(bmp.buffer);
+
+
+    return 0;
+}
+
+
+
+uint32_t sumpixcounts(uint32_t *colarr, uint8_t arrsize)
+{
+    uint32_t sumpix = 0;
+    for (int i = 0; i < arrsize; i++) {
+        sumpix += colarr[i];
+    }
+    return sumpix;
+}
+
+/* Counts the number of pixels above provided threshold values of RGB */
+unsigned long threshold_pixels(struct BmpStruct *bmpstructPtr, unsigned char redthresh, \
+        unsigned char bluethresh, unsigned char greenthresh)
+{
+    unsigned long redcounter = 0;
+    unsigned char *curpx, *pxr, *pxg, *pxb;
+    // int height = (*bmp).height;
+    uint16_t height = bmpstructPtr->height;
+    uint16_t width = bmpstructPtr->width;
+    unsigned char *bmp_buffer = bmpstructPtr->buffer;
+    // printf("Height %d \n", height);
+
+    for(uint16_t rowi = 0; rowi < height; rowi++) {
+        // printf("Row: %d \n", rowi);
+        for(uint16_t coli = 0; coli < width; coli++) {
+            // curpx = locinbmpbuffer + 3*pxi; // RGB stored consequtively
+            curpx = get_pointertopix(bmp_buffer, rowi, coli, width);
+            pxr = curpx;
+            pxg = curpx + 1;
+            pxb = curpx + 2;
+
+            //  Implementing new logic for finding red
+            if(*pxr > redthresh && *pxg > greenthresh && *pxb > bluethresh) {
+                // printf("(x,,y):%3d %3d. RGB: %3u, %3u, %3u \n", rowi, coli, *pxr, *pxg, *pxb);
+                redcounter++;
+            }
+        }
+    }
+    printf("Total reds above %u: %ld \n", redthresh, redcounter);
+    // curredcount = redcounter;
+    return redcounter;
+
+}
+
+uint8_t print_cvarrs(void)
+{
+    printf("\n Printing CV-arrs \n Dominant colors \n");
+    for (int i = 0; i < 3; i++) {printf("%d ",domcol_arr[i]);}
+    printf("\n Sum of colors \n");
+    for (int i = 0; i < 3; i++) {printf("%d ",sumcount_arr[i]);}
+    printf("\n Colors in grids ");
+    char *colarr[3] = {"red","green","blue"};
+    for (int i = 0; i < 3; i++) {
+        printf("\n %s \n", colarr[i]);
+        for (int j = 0; j < 3; j++) {
+            printf("%d ", count_arr[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n Done \n");
+    return 0;
+}
+================
+visrl
+===============
+
+
+uint8_t get_state_old(void)
+{
+    cv_task();
+    uint8_t state = 6;
+
+    if (curredcount == 0) {
+        state = 0;
+    }
+    else if (curredcount < 10000) {
+        state = 1;
+    }
+    else if (curredcount < 20000) {
+        state = 2;
+    }
+    else if (curredcount < 30000) {
+        state = 3;
+    }
+    else if (curredcount < 40000) {
+        state = 4;
+    }
+    else if (curredcount < 50000) {
+        state = 5;
+    }
+    else {
+        /* Terminal state */
+        rl_isterminal = 1;
+    }
+    // printf(": State: %d :",state);
+    return state;
+}
+
+
+
+int visrl_power(int base, int exp)
+{
+    /* function to calculate exponents */
+    if (exp == 0)
+        return 1;
+    else if (exp % 2)
+        return base * visrl_power(base, exp - 1);
+    else {
+        int temp = visrl_power(base, exp / 2);
+        return temp * temp;
+    }
+}
+
+uint8_t get_state(void)
+{
+    cv_3grids();
+    totredcount = 0;
+    // uint8_t state_binary_array[3] = {0,0,0};
+    uint8_t stateind = 0;
+
+    // see if each grid has red
+    for(int i=0; i<3; i++) {
+        if (redcount_arr[i] > 0) {
+            totredcount += redcount_arr[i];
+            // state_binary_array[i] = 1;
+            stateind += visrl_power(2,i);
+        }
+    }
+    return stateind;
+}
+
+

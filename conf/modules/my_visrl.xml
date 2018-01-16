@@ -1,0 +1,96 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="my_visrl">
+  <doc>
+      <description>Module that implements the experimental vision-based RL
+          navigation for the thesis of Manan Siddiquee.
+      The Flight plan should have a waypoint labelled goal</description>
+    <define name="VISRL_CAMERA" value="front_camera|bottom_camera" description="Video device to use"/>
+    <define name="VISRL_FPS" value="0" description="The (maximum) frequency to run the calculations at. If zero, it will max out at the camera frame rate"/>
+    <define name="VISRL_USEOPTIONS" description="Macro to trigger the use of option to turn till color is seen"/>
+    <define name="VISRL_TWOGOALS" description="Macro to trigger the selection of two goal task"/>
+    <define name="VISRL_SARSA" description="triggers the use of SARSA learning"/>
+    <define name="VISRL_RANDOMSTARTS" description="sets intialization to random location; defaults to fixed initialization at cyber zoo center"/>
+    <define name="VISRL_LOGGINGLOCATION" description="Used to define location in FS where the RL logs and qdicts will be stored"/>
+  </doc>
+
+  <settings>
+    <dl_settings>
+      <dl_settings NAME="RL params">
+         <dl_setting MAX="100" MIN="0" STEP="1" VAR="rl_eps" shortname="epsilon" module="my_visrl/visrl" type="int"/>
+         <dl_setting MAX="1.0" MIN="0.0" STEP="0.01" VAR="rl_alp" shortname="alpha" module="my_visrl/visrl" type="float"/>
+         <dl_setting MAX="1.0" MIN="0.0" STEP="0.01" VAR="rl_gamma" shortname="gamma" module="my_visrl/visrl" type="float"/>
+         <dl_setting var="red_goal_reach_thresh" min="1" step="1" max="10" shortname="red_goal_thresh" type="int" />
+         <dl_setting var="blue_goal_reach_thresh" min="1" step="1" max="10" shortname="blue_goal_thresh" type="int" />
+         <dl_setting var="red_thresh" min="0" step="0.01" max="1" shortname="r_thresh" type="float"/>
+         <dl_setting var="blue_thresh" min="0" step="0.01" max="1" shortname="b_thresh" type="float"/>
+         <dl_setting var="min_pix_thresh" min="0" step="100" max="10000" shortname="min_pix_thresh" type="int"/>
+         <!--
+         <dl_setting var="rl_maxsteps" min="1" step="1" max="200" shortname="MaxSteps" type="int" />
+         <dl_setting var="rl_maxepsinc" min="1" step="1" max="200" shortname="IncCurMaxEpsBy" type="int" />
+-->
+         <dl_setting var="rl_cur_episodes_limit" min="1" step="1" max="5000" shortname="CurEpisodesLimit" type="int"  module="my_visrl/simsoft"/>
+         <dl_setting var="rl_cur_episodes_limit_change" min="1" step="1" max="500" shortname="EpisodesLimitChange" type="int"  module="my_visrl/simsoft"/>
+         <dl_setting var="rl_cur_epsilon_change" min="1" step="1" max="100" shortname="EpsilonChange" type="int"  module="my_visrl/simsoft"/>
+         <dl_setting var="rl_max_episodes_limit" min="1" step="1" max="10000" shortname="MaxEpisodes" type="int"  module="my_visrl/simsoft"/>
+         <!-- <dl_setting var="rl_maxeps" min="1" step="1" max="1000" shortname="MaxTrainEps" type="int" /> -->
+         <dl_setting var="rl_maxruns" min="1" step="1" max="100" shortname="MaxRuns" type="int"  module="my_visrl/simsoft"/>
+         <dl_setting var="toset_xloc" min="-4.0" step="0.1" max="4.0" type="float" module="my_visrl/mynavfuncs"/>
+         <dl_setting var="toset_yloc" min="-4.0" step="0.1" max="4.0" type="float" module="my_visrl/mynavfuncs"/>
+         <dl_setting var="toset_head" min="0" step="5" max="360" type="float" module="my_visrl/mynavfuncs"/>
+      </dl_settings>
+    </dl_settings>
+  </settings>
+
+  <depends>video_thread</depends>
+
+  <header>
+    <file name="visrl.h"/>
+  </header>
+
+  <init fun="visrl_init()"/>
+  <!--<periodic fun="a" freq="0.5" autorun="TRUE"/>-->
+  <makefile target="ap">
+    <define name="VISRL_AP"/>
+        <define name="VIS_CAMERA" value="front_camera"/>
+        <define name="VIS_FPS" value="1"/>
+    <file name="vis_ap.c" dir="modules/my_visrl/"/>
+    <file name="mynavfuncs.c" dir="modules/my_visrl/"/>
+    <file name="simsoft.c" dir="modules/my_visrl/"/>
+    <file name="mydict.c" dir="modules/my_visrl/"/>
+    <file name="visrl.c" dir="modules/my_visrl/"/>
+  </makefile>
+  <makefile target="nps">
+    <define name="VISRL_NPS"/>
+    <file name="vis_nps.c" dir="modules/my_visrl/"/>
+    <file name="mynavfuncs.c" dir="modules/my_visrl/"/>
+    <file name="simsoft.c" dir="modules/my_visrl/"/>
+    <file name="mydict.c" dir="modules/my_visrl/"/>
+    <file name="visrl.c" dir="modules/my_visrl/"/>
+    <!--<raw>$(TARGET).CFLAGS += -lcurl</raw>-->
+    <!--raw>
+     ap.CFLAGS += "-I/usr/include/
+     ap.LDFLAGS += "-L/usr/lib/ -lcurl"
+    </raw-->
+<!--> QUESTION STILL REMAINS HOW TO COMPILE TO AP<-->
+    <raw>
+        nps.LDFLAGS += -lcurl
+        nps.LDFLAGS += -ljpeg
+        nps.LDFLAGS += -glib
+        <!-- nps.LDFLAGS += -lgtk-2.0-dev -->
+        <!--
+        ap.LDFLAGS += -lcurl
+        ap.LDFLAGS += -ljpeg
+        ap.LDFLAGS += -glib
+        -->
+    </raw>
+  </makefile>
+  <!--
+  <makefile target="ap|nps">
+    <file name="mynavfuncs.c" dir="modules/manan_test/"/>
+    <file name="mydict.c" dir="modules/manan_test/"/>
+    <file name="visrl.c" dir="modules/manan_test/"/>
+  </makefile>
+-->
+</module>
+

@@ -1,0 +1,194 @@
+<!DOCTYPE flight_plan SYSTEM "../flight_plan.dtd">
+
+<flight_plan alt="1.2" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="20" name="Rotorcraft Optitrack (Delft)" security_height="0.3">
+  <header>
+	#include "autopilot.h"
+    #include "subsystems/ahrs.h"
+    #include "subsystems/electrical.h"
+    #include "subsystems/datalink/datalink.h"
+    #ifdef VISRL_NPS
+    #include "modules/my_visrl/vis_nps.h"
+    #endif
+    #ifdef VISRL_AP
+	#include "modules/my_visrl/vis_ap.h"
+    #endif
+	#include "modules/my_visrl/visrl.h"
+	#include "modules/my_visrl/mynavfuncs.h"
+	#include "modules/my_visrl/simsoft.h"
+</header>
+  <waypoints>
+    <waypoint name="HOME" x="0.0" y="0.0"/>
+    <waypoint lat="51.990634" lon="4.376789" name="StartPos"/>
+    <waypoint name="CLIMB" x="0.0" y="2.5"/>
+    <waypoint name="CURPOS" x="3" y="3.5"/>
+    <waypoint name="STDBY" x="0" y="0"/>
+    <waypoint name="GOAL" x="0" y="0"/>
+    <waypoint name="p1" x="0.7" y="3.3"/>
+    <waypoint name="p2" x="-3.7" y="0.4"/>
+    <waypoint name="p3" x="-0.6" y="-4.1"/>
+    <waypoint name="p4" x="4.0" y="-1.2"/>
+    <waypoint name="HeightRef" x="3" y="7"/>
+    <waypoint lat="51.990622" lon="4.376852" name="SZ1"/>
+    <waypoint lat="51.990594" lon="4.376778" name="SZ2"/>
+    <waypoint lat="51.990639" lon="4.376732" name="SZ3"/>
+    <waypoint lat="51.990667" lon="4.376803" name="SZ4"/>
+    <waypoint name="BoundaryChecker" x="0.25" y="0.25"/>
+    <waypoint name="TD" x="5" y="-5"/>
+  </waypoints>
+  <sectors>
+    <sector color="green" name="MyWorld">
+      <corner name="SZ1"/>
+      <corner name="SZ2"/>
+      <corner name="SZ3"/>
+      <corner name="SZ4"/>
+    </sector>
+  </sectors>
+  <blocks>
+    <block name="Wait GPS">
+      <call_once fun="NavKillThrottle()"/>
+      <while cond="!GpsFixValid()"/>
+    </block>
+    <block name="Geo init">
+      <while cond="LessThan(NavBlockTime(), 10)"/>
+      <call_once fun="NavSetGroundReferenceHere()"/>
+    </block>
+    <block name="Holding point">
+      <call_once fun="NavKillThrottle()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="Start Engine">
+      <call_once fun="NavResurrect()"/>
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+    <block name="Takeoff" strip_button="Takeoff" strip_icon="takeoff.png">
+      <exception cond="stateGetPositionEnu_f()->z > 1.0" deroute="Standby"/>
+      <call_once fun="NavSetWaypointHere(WP_CLIMB)"/>
+      <call_once fun="NavSetWaypointHere(WP_STDBY)"/>
+      <stay climb="nav_climb_vspeed" vmode="climb" wp="CLIMB"/>
+    </block>
+    <block name="Standby" strip_button="Standby" strip_icon="home.png">
+      <stay wp="STDBY"/>
+    </block>
+    <block name="goto_p1">
+      <call_once fun="NavSetWaypointHere(WP_CURPOS)"/>
+      <call_once fun="nav_set_heading_towards_waypoint(WP_p1)"/>
+      <go approaching_time="0" from="CURPOS" hmode="route" wp="p1"/>
+      <stay until="stage_time > 1" wp="p1"/>
+    </block>
+    <block name="goto_p2">
+      <call_once fun="NavSetWaypointHere(WP_CURPOS)"/>
+      <call_once fun="nav_set_heading_towards_waypoint(WP_p2)"/>
+      <go approaching_time="0" from="CURPOS" hmode="route" wp="p2"/>
+      <stay until="stage_time > 1" wp="p2"/>
+    </block>
+    <block name="goto_p3">
+      <call_once fun="NavSetWaypointHere(WP_CURPOS)"/>
+      <call_once fun="nav_set_heading_towards_waypoint(WP_p3)"/>
+      <go approaching_time="0" from="CURPOS" hmode="route" wp="p3"/>
+      <stay until="stage_time > 1" wp="p3"/>
+    </block>
+    <block name="goto_p4">
+      <call_once fun="NavSetWaypointHere(WP_CURPOS)"/>
+      <call_once fun="nav_set_heading_towards_waypoint(WP_p4)"/>
+      <go approaching_time="0" from="CURPOS" hmode="route" wp="p4"/>
+      <stay until="stage_time > 1" wp="p4"/>
+      <deroute block="goto_p1"/>
+    </block>
+    <block name="WaitOnGoal">
+      <stay wp="GOAL"/>
+    </block>
+    <block name="RL_FOR">
+      <call_once fun="rl_action_forward()"/>
+      <stay wp="GOAL"/>
+    </block>
+    <block name="RL_LEF">
+      <call_once fun="rl_action_left()"/>
+      <stay wp="GOAL"/>
+    </block>
+    <block name="RL_RIG">
+      <call_once fun="rl_action_right()"/>
+      <stay wp="GOAL"/>
+    </block>
+    <block name="SetupEpisode">
+      <call_once fun="NavSetWaypointHere(WP_CURPOS)"/>
+      <call fun="rl_init_uav()"/>
+      <call fun="rl_smooth_turn(init_headind)"/>
+      <go approaching_time="0" from="CURPOS" hmode="route" wp="GOAL"/>
+      <stay until="stage_time>2" wp="GOAL"/>
+    </block>
+    <block name="InitRL">
+      <call fun="rl_init_ep()"/>
+      <stay until="stage_time>1" wp="GOAL"/>
+    </block>
+    <block name="DoOneStep">
+      <while cond="!rl_isterminal">
+        <call fun="rl_set_cur()"/>
+        <call fun="rl_write_step_log()"/>
+        <call fun="rl_take_cur_action()"/>
+        <stay until="stage_time>1" wp="GOAL"/>
+        <call fun="rl_set_nxt()"/>
+        <call fun="rl_update_qdict()"/>
+        <call fun="rl_check_terminal()"/>
+      </while>
+    </block>
+    <block name="WriteEpiLog">
+      <call fun="rl_write_episode_log()"/>
+    </block>
+    <block name="EndEp">
+      <exception cond="epinum > rl_curmaxeps" deroute="LogQdicts"/>
+      <deroute block="SetupEpisode"/>
+    </block>
+    <block name="LogQdicts">
+      <call fun="print_qdict()"/>
+      <call fun="copy_qdict()"/>
+    </block>
+    <block name="IncreaseCurMaxEps">
+      <exception cond="endrun" deroute="WriteRunMetadata"/>
+      <call fun="rl_inc_maxepochs()"/>
+      <call fun="rl_inc_eps()"/>
+      <deroute block="SetupEpisode"/>
+    </block>
+    <block name="WriteRunMetadata">
+      <call fun="save_run_metadata()"/>
+    </block>
+    <block name="EndRun">
+      <exception cond="endsess" deroute="EndSession"/>
+      <call fun="rl_addruncounter()"/>
+      <call fun="setup_run_fold()"/>
+      <call fun="rl_resetrun()"/>
+      <deroute block="SetupEpisode"/>
+    </block>
+    <block name="EndSession">
+      <call fun="simsoft_cleanup()"/>
+      <stay wp="GOAL"/>
+    </block>
+    <block name="CopyTest">
+      <call fun="copy_qdict()"/>
+      <stay wp="GOAL"/>
+    </block>
+    <block name="PrintQDict">
+      <call fun="print_qdict()"/>
+      <stay wp="GOAL"/>
+    </block>
+    <block name="ReadQDict_TXT">
+      <call_once fun="NavSetWaypointHere(WP_STDBY)"/>
+      <call fun="load_qdict_fromtxt()"/>
+      <stay wp="STDBY"/>
+    </block>
+    <block name="land here" strip_button="Land Here" strip_icon="land-right.png">
+      <call_once fun="NavSetWaypointHere(WP_TD)"/>
+    </block>
+    <block name="land">
+      <go wp="TD"/>
+    </block>
+    <block name="flare">
+      <exception cond="NavDetectGround()" deroute="Holding point"/>
+      <exception cond="!nav_is_in_flight()" deroute="landed"/>
+      <call fun="NavStartDetectGround()"/>
+      <stay climb="nav_descend_vspeed" vmode="climb" wp="TD"/>
+    </block>
+    <block name="landed">
+      <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
+    </block>
+  </blocks>
+</flight_plan>
