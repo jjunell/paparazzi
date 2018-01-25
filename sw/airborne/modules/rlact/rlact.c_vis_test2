@@ -35,8 +35,8 @@
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #ifndef FILE_RLACT_PATH
-//#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
-#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
+#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone (ap)
+//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation (nps)
 #endif
 
 //*************** DECLARE VARIABLES *****************//
@@ -180,9 +180,9 @@ else{
 	// FOR flight test - use camera
 	switch(state_curr){
 	case 2 :  case 22 : case 30 : // flowers 
-		vs = 1;
+		vs = 1;  break;
 	case 35 :      // if in hive state
-		vs = 2;
+		vs = 2;  break;
 	default :         // not a reward space (code done for random policy)
 		vs = 0;
 	} // switch statement - vision state 

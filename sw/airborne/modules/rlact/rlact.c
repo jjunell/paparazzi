@@ -32,11 +32,12 @@
 #include "mcu_periph/uart.h"
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
+#include "modules/detect_reward/detect_reward.h"
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #ifndef FILE_RLACT_PATH
-//#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone
-#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation
+#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone (ap)
+//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation (nps)
 #endif
 
 //*************** DECLARE VARIABLES *****************//
@@ -52,6 +53,7 @@ const int8_t nstates=36; //=ndim*ndim
 // flags
 int8_t nsflag;  //nectar state flag = nectar full
 int8_t hbflag;      //hitbounds flag
+int8_t falseposflag; // false positive reward detection
 
 // Bellman equation
     double V_old, alphav;
@@ -66,16 +68,21 @@ int8_t hbflag;      //hitbounds flag
 // Storing value function:  Value function, V, is stored in V[36][6] for algorithm purposes.  But each iteration the value function and kv matrices will be written to a file so as to be saved and not as easily rewritten.
     FILE *file_Vfcn, *file_kv;
     FILE *file_reg, *file_regw, *file_actw, *file_act;
+
     int16_t i, j, k;
     
     char filename_regen[200];
     char filename_act[200];
     char filename_Vfcn[200];
-	char filename_kv[200];
-	
-// reading in value function file
-	FILE *file_Vin;
-	char filename_Vin[200];
+	  char filename_kv[200];
+
+	  // counting false positive and false negative reward detection
+	  static int false_pos[36]={0};
+	  static int false_neg[36]={0};
+
+	  FILE *file_false_neg, *file_false_pos;
+	  char filename_false_pos[200];
+	  char filename_false_neg[200];
 	
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
@@ -96,6 +103,7 @@ int8_t a,act_sf2;
 double Vact[8], max;
 
 
+
 //*********************** FUNCTIONS ***********************//
 void rlact_init(void) {
 //initialize variables
@@ -113,7 +121,7 @@ printf("init1\n");
 	
 	act= 0; 
 	pass=0;
-	eps=100;  // full greedy eps=100
+	eps=0;
 
 	my_wp.z = NAV_DEFAULT_ALT;
 
@@ -130,19 +138,6 @@ printf("init3\n");
 	file_regw = fopen(filename_regen,"w");
 	fclose(file_regw);
 
-printf("init4\n");
-	//initialize V to the values from given file.
-	sprintf(filename_Vin, "%sVin.txt", FILE_RLACT_PATH);
-	file_Vin = fopen(filename_Vin,"r");
-	    if(file_Vin==NULL){printf("Error! 'Vin.txt' NULL. No Value Function updates written to file.\n");}
-    else{
-    for(i=0;i<ndim;i++){
-    	for(j=0;j<nstates;j++){ 
-    	(void)fscanf(file_Vin, "%lf", &V[j][i]);
-    	}}// end loops to read in Vin
-    } //end security check
-    fclose(file_Vin);
-    printf("init5\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
@@ -176,23 +171,36 @@ else{
 
 	printf("state = %d, ns= %d, visit# %d, Vold= %.4f, ",state_curr, ns_curr, kv[state_curr][ns_curr],V[state_curr][ns_curr]);
 	
-	// FOR SIM - define vision state based on location state
-	// FOR flight test - use camera
-	switch(state_curr){
-	case 2 :  case 22 : case 30 : // flowers 
-		vs = 1;
+
+	// FOR flight test - use camera to detect flower
+  vs = detected_reward; //vs=1, detected flower; vs=0 nothing detected
+  switch(state_curr){
+	case 2 :  case 22 : case 30 : // flowers
+		//vs = 1;   //for sim- define vision state based on location state
+	  if(vs==0) {  //false negative
+       false_neg[state_curr]=false_neg[state_curr]+1;
+       printf("false negative: reward detection missed at flower in state: %d",state_curr);
+	  }
+		break;
 	case 35 :      // if in hive state
-		vs = 2;
+		vs = 2;  break;  // assume perfect detection of hive
 	default :         // not a reward space (code done for random policy)
-		vs = 0;
-	} // switch statement - vision state 
+		//vs = 0;  // for sim
+    if(vs==1) {  //false positive
+       falseposflag = 1;
+       false_pos[state_curr]=false_pos[state_curr]+1;
+       printf("false positive: unwarranted reward given in state: %d",state_curr);
+    }
+	} // switch statement - vision state
 
 
 	// give rewards for current state BASED ON VISION and calculate next state
 	switch(vs){
 	case 1 : // flowers 
 		reward = 8.0;
+
 		ns_next = ns_curr + 1;
+    if(falseposflag==1){ ns_next = ns_curr;}  //if reward is false positive, don't go to next nectar state
 		nsflag = 0;
 		
 			if(ns_next>nns){ //if full of nectar, no reward
@@ -265,6 +273,9 @@ else{
 		}
     } // switch statement - reward function
     
+    //override stay in same nectar state:
+    ns_curr=0; ns_next=0;
+    
 /* Now with reward and next state calculated:
    1) update value function for current state using belman eqn
    2) take action in paparazzi sim/IRL
@@ -287,6 +298,8 @@ if(pass==11 || pass==101 || pass==151 || pass==201 || pass==251 || pass==301 || 
   // open the file
 	file_Vfcn = fopen(filename_Vfcn,"w");
 	file_kv = fopen(filename_kv,"w");
+	file_false_pos = fopen(filename_false_pos,"w");
+	file_false_neg = fopen(filename_false_neg,"w");
   
     if(file_Vfcn==NULL){printf("Error! 'Vfcn.txt' NULL. No Value Function updates written to file.\n");}
     else{
@@ -294,11 +307,14 @@ if(pass==11 || pass==101 || pass==151 || pass==201 || pass==251 || pass==301 || 
     	for(j=0;j<nstates;j++){ 
     	fprintf(file_Vfcn, "%.10f ", V[j][i]);
     	fprintf(file_kv, "%d ", kv[j][i]);
+    	if(i==0){fprintf(file_false_pos, "%d ", false_pos[j]);fprintf(file_false_neg, "%d ", false_neg[j]);}
     	}}// end loops to print Vfcn and kv in file
     	
     } //end security check
         fclose(file_Vfcn);
         fclose(file_kv);
+        fclose(file_false_pos);
+        fclose(file_false_neg);
    } //end update value function 
     
     	//execute in paparazzi sim/IRL

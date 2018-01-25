@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "modules/computer_vision/lib/vision/image.h"
+#include "stdio.h"
 
 #ifndef COLORFILTER_FPS
 #define COLORFILTER_FPS 0       ///< Default FPS (zero means run at camera fps)
@@ -61,6 +62,11 @@ int color_count = 0;
 struct image_t *colorfilter_func(struct image_t *img);
 struct image_t *colorfilter_func(struct image_t *img)
 {
+
+  uint8_t *img_buf = (uint8_t*)(img->buf);
+  // print to see uyvy color of center pixel
+ // printf("uyvy %d %d %d %d\n", img_buf[img->w * 2 * img->h/2 + img->w], img_buf[img->w * 2 * img->h/2 + img->w + 1], img_buf[img->w * 2 * img->h/2 + img->w + 2], img_buf[img->w * 2 * img->h/2 + img->w + 3]);
+
   // Filter
   color_count = image_yuv422_colorfilt(img, img,
                                        color_lum_min, color_lum_max,
