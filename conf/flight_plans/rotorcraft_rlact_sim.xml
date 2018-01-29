@@ -12,6 +12,10 @@
     <waypoint name="p2" x="0.0" y="0.0" height="1.5"/>
     <waypoint name="p3" x="5.0" y="3.0" height="1.5"/>
     <waypoint name="p00" x="-1.0" y="-1.0" height="1.5"/>
+    <waypoint name="fl1" lat="51.990629" lon="4.376760" height="1.5"/>
+    <waypoint name="fl2" lat="51.990629" lon="4.376760" height="1.5"/>
+    <waypoint name="fl3" lat="51.990629" lon="4.376760" height="1.5"/>
+    <waypoint name="hive" lat="51.990629" lon="4.376760" height="1.5"/>
     <waypoint name="TD" x="2.0" y="0.0"/>
   </waypoints>
   <blocks>
@@ -23,6 +27,10 @@
       <while cond="LessThan(NavBlockTime(), 10)"/>
       <call_once fun="NavSetGroundReferenceHere()"/>
       <!--<call_once fun="NavSetAltitudeReferenceHere()"/>-->
+	<call_once fun="setWP_wrt00(WP_fl1,2)"/>
+	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
+	<call_once fun="setWP_wrt00(WP_hive,35)"/>
     </block>
     <block name="Holding point">
       <call_once fun="NavKillThrottle()"/>
@@ -40,7 +48,7 @@
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
       <stay wp="STDBY"/>
     </block>
-     <block name="stay_p00">
+    <block name="stay_p00">
       <stay wp="p00"/>
     </block>
     <block name="stay_p1">
@@ -49,6 +57,14 @@
     <block name="stay_p2">
       <!--exception cond="GetPosAlt()>5" deroute="land here"/-->
       <stay wp="p2"/>
+    </block>
+   <block name="set_flowers">   <!-- sets flowers wrt wp_00-->
+    	<exception cond="!GpsFixValid()" deroute="land here"/>
+    	<exception cond="GetPosAlt()>5" deroute="land here"/>
+	<call_once fun="setWP_wrt00(WP_fl1,2)"/>
+	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
+	<call_once fun="setWP_wrt00(WP_hive,35)"/>
     </block>
     <block name="learn_2acts">
     	<!--exception cond="GetPosAlt()>5" deroute="land here"/-->

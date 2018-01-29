@@ -19,8 +19,8 @@
  * the Free Software Foundation, 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
- 
- /* This module creates a flight plan callable function to learn high level guidance via reinforcement learning.  written by Jaime Junell */
+
+/* This module creates a flight plan callable function to learn high level guidance via reinforcement learning.  written by Jaime Junell */
 
 #include "rlact.h"
 #include "generated/airframe.h"
@@ -32,7 +32,6 @@
 #include "mcu_periph/uart.h"
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
-
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
 const int8_t simnps = 0;
@@ -53,53 +52,53 @@ const int8_t simnps = 0;
 // environment and states for RL algorithm
 int8_t drow, dcol;
 int8_t state_curr, state_next;
-int8_t ns_curr, ns_next;//current nectar state 0-5 (base 0)
+int8_t ns_curr, ns_next;  //current nectar state 0-5 (base 0)
 int8_t vs;  //vision state, 0= nothing seen, 1= flower seen, 2= hive seen
 const int8_t nns = 5;  //maximum nectar state (base 0)
-const int8_t ndim = 6; //number of elements in a dimension = 6 (nrows,ncols, nns)
-const int8_t nstates=36; //=ndim*ndim
+const int8_t ndim = 6;  //number of elements in a dimension = 6 (nrows,ncols, nns)
+const int8_t nstates = 36;  //=ndim*ndim
 
 // flags
 int8_t nsflag;  //nectar state flag = nectar full
 int8_t hbflag;      //hitbounds flag
-int8_t falseposflag; // false positive reward detection
+int8_t falseposflag;  // false positive reward detection
 
 // Bellman equation
-    double V_old, alphav;
-    const double belgam = 0.9;  // gamma for belman equation
-    static double V[36][6]= {{0}}; // Value function initialized to zeros
-    static int kv[36][6]= {{0}}; // number of times a state has been visited
-    static int ka[8]= {0};  //number of times an action has been taken, initialized as 0
-  // with ka declared as 'int', as long as the GCS is not stopped, the value will not reinitialize
-  // with ka declared as 'static int', same thing.  GCS and server processes can be stopped, but stopping the simulator process, will cause the ka variable to be reinitialized.  
-	double reward;
+double V_old, alphav;
+const double belgam = 0.9;  // gamma for belman equation
+static double V[36][6] = { { 0 } };  // Value function initialized to zeros
+static int kv[36][6] = { { 0 } };  // number of times a state has been visited
+static int ka[8] = { 0 };  //number of times an action has been taken, initialized as 0
+// with ka declared as 'int', as long as the GCS is not stopped, the value will not reinitialize
+// with ka declared as 'static int', same thing.  GCS and server processes can be stopped, but stopping the simulator process, will cause the ka variable to be reinitialized.
+double reward;
 
 // Storing value function:  Value function, V, is stored in V[36][6] for algorithm purposes.  But each iteration the value function and kv matrices will be written to a file so as to be saved and not as easily rewritten.
-    FILE *file_Vfcn, *file_kv;
-    FILE *file_reg, *file_regw, *file_actw, *file_act;
+FILE *file_Vfcn, *file_kv;
+FILE *file_reg, *file_regw, *file_actw, *file_act;
 
-    int16_t i, j, k;
-    
-    char filename_regen[200];
-    char filename_act[200];
-    char filename_Vfcn[200];
-	  char filename_kv[200];
+int16_t i, j, k;
 
-	  // counting false positive and false negative reward detection
-	  static int false_pos[36]={0};
-	  static int false_neg[36]={0};
+char filename_regen[200];
+char filename_act[200];
+char filename_Vfcn[200];
+char filename_kv[200];
 
-	  FILE *file_false_neg, *file_false_pos;
-	  char filename_false_pos[200];
-	  char filename_false_neg[200];
-	
+// counting false positive and false negative reward detection
+static int false_pos[36] = { 0 };
+static int false_neg[36] = { 0 };
+
+FILE *file_false_neg, *file_false_pos;
+char filename_false_pos[200];
+char filename_false_neg[200];
+
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
-const double del = 0.75;// distance to move in each action
+const double del = 0.75;  // distance to move in each action
 static int32_t pass;
 
 // policy decisions - just random for now
-const int8_t nact = 8; //number of actions possible (NESW + diagonals)
+const int8_t nact = 8;  //number of actions possible (NESW + diagonals)
 int8_t act;
 int16_t eps;  //eps=0 is random, eps=100 is full greedy.
 
@@ -107,14 +106,15 @@ int16_t eps;  //eps=0 is random, eps=100 is full greedy.
 //int8_t hitsbounds(uint16_t state_curr_sf1, uint8_t act_sf1)
 
 //int8_t chooseact(uint16_t state_curr_sf2, uint8_t ns_curr_sf2 ,uint8_t nact_sf2, uint16_t eps_sf2)
-int8_t a,act_sf2;
+int8_t a, act_sf2;
 //int8_t index[8] = {-1};
 double Vact[8], max;
 
 
 
 //*********************** FUNCTIONS ***********************//
-void rlact_init(void) {
+void rlact_init(void)
+{
 //initialize variables
 printf("init1\n");
 	state_curr = 0;
@@ -150,12 +150,13 @@ printf("init3\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
-bool rlact_run(uint8_t wpa, uint8_t wpb){
-pass++;
-// printf("pass = %d\n",pass);
+bool rlact_run(uint8_t wpa, uint8_t wpb)
+{
+  pass++;
+  // printf("pass = %d\n",pass);
 
-// first pass?  choose initial state randomly, and move wpb wrt p00
-if(pass==1){
+  // first pass?  choose initial state randomly, and move wpb wrt p00
+  if (pass == 1) {
 
 	state_curr = rand() % nstates; //Random state between 0-35;
 	drow = state_curr % ndim; // remainder = #increments to move in y from home

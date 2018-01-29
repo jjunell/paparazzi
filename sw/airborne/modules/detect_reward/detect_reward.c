@@ -68,5 +68,5 @@ void detect_reward_periodic()
 {
 	detected_reward = color_count > thresholdColorCount;
 
-	printf("Color_count: %d  threshold: %d reward_flag: %d \n", color_count, thresholdColorCount, detected_reward);
+	//printf("Color_count: %d  threshold: %d reward_flag: %d \n", color_count, thresholdColorCount, detected_reward);
 }

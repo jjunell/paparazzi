@@ -37,7 +37,6 @@
     </block>
     <block name="Geo init">
       <while cond="LessThan(NavBlockTime(), 10)"/>
-      <!--call fun="NavSetGroundReferenceHere()"/--> 
       <call_once fun="NavSetWaypointHere(WP_HOME)"/>
       <call_once fun="NavSetWaypointHere(WP_p1)"/>
       <call_once fun="NavSetWaypointHere(WP_p2)"/>
@@ -64,22 +63,22 @@
       <stay climb="nav_climb_vspeed" vmode="climb" wp="CLIMB"/>
     </block>
     <block name="Standby" strip_button="Standby" strip_icon="home.png">
-      	<stay wp="STDBY"/>
+      <stay wp="STDBY"/>
     </block>
     <block name="stay_p00">
-    	<exception cond="!GpsFixValid()" deroute="land here"/>
-    	<exception cond="GetPosAlt()>5" deroute="land here"/>
-      	<stay wp="p00"/>
+      <exception cond="!GpsFixValid()" deroute="land here"/>
+      <exception cond="GetPosAlt()>5" deroute="land here"/>
+      <stay wp="p00"/>
     </block>
     <block name="stay_p1">
-    	<exception cond="!GpsFixValid()" deroute="land here"/>
-    	<exception cond="GetPosAlt()>5" deroute="land here"/>
-      	<stay wp="p1"/>
+      <exception cond="!GpsFixValid()" deroute="land here"/>
+      <exception cond="GetPosAlt()>5" deroute="land here"/>
+      <stay wp="p1"/>
     </block>
     <block name="stay_p2">
-    	<exception cond="!GpsFixValid()" deroute="land here"/>
-    	<exception cond="GetPosAlt()>5" deroute="land here"/>
-    	<stay wp="p2"/>
+      <exception cond="!GpsFixValid()" deroute="land here"/>
+      <exception cond="GetPosAlt()>5" deroute="land here"/>
+      <stay wp="p2"/>
     </block>
    <block name="set_flowers">   <!-- sets flowers wrt wp_00-->
     	<exception cond="!GpsFixValid()" deroute="land here"/>
@@ -89,30 +88,6 @@
 	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
 	<call_once fun="setWP_wrt00(WP_hive,35)"/>
     </block>
-    <!--block name="increment_p2x">
-    <exception cond="!GpsFixValid()" deroute="land here"/>
-    <exception cond="GetPosAlt()>5" deroute="land here"/>
-		<call fun="IncrementWaypointx(WP_p2)"/>
-		<deroute block="stay_p1"/>
-	</block>
-    <block name="increment_p1x">
-    <exception cond="!GpsFixValid()" deroute="land here"/>
-    <exception cond="GetPosAlt()>5" deroute="land here"/>
-        <call fun="IncrementWaypointx(WP_p1)"/>
-		<deroute block="stay_p2"/>
-    </block>
-    <block name="increment_p2y">
-    <exception cond="!GpsFixValid()" deroute="land here"/>
-    <exception cond="GetPosAlt()>5" deroute="land here"/>
-		<call fun="IncrementWaypointy(WP_p2)"/>
-		<deroute block="stay_p1"/>
-    </block>
-    <block name="increment_p1y">
-    <exception cond="!GpsFixValid()" deroute="land here"/>
-    <exception cond="GetPosAlt()>5" deroute="land here"/>
-		<call fun="IncrementWaypointy(WP_p1)"/>
-		<deroute block="stay_p2"/>
-    </block-->
     <block name="learn_2acts">
     <exception cond="!GpsFixValid()" deroute="land here"/>
     <exception cond="GetPosAlt()>5" deroute="land here"/>

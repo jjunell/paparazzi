@@ -47,7 +47,7 @@
   <aircraft
    name="ARDrone2_rlact_sim"
    ac_id="114"
-   airframe="airframes/JJ/ardrone2_raw_sim_rlact_vis.xml"
+   airframe="airframes/JJ/ardrone2_raw_sim_rlact.xml"
    radio="radios/dummy.xml"
    telemetry="telemetry/default_rotorcraft.xml"
    flight_plan="flight_plans/rotorcraft_rlact_sim.xml"
