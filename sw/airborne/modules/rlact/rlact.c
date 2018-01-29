@@ -32,13 +32,22 @@
 #include "mcu_periph/uart.h"
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
-#include "modules/detect_reward/detect_reward.h"
+
 
 /** Set the default File logger path to the USB drive for ardrone, other for */
-#ifndef FILE_RLACT_PATH
-#define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone (ap)
-//#define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation (nps)
-#endif
+const int8_t simnps = 0;
+//if(simnps){
+//  #ifndef FILE_RLACT_PATH
+//    #define FILE_RLACT_PATH "./sw/airborne/modules/rlact/"   // for simulation (nps)
+//  #endif
+//  const int8_t detected_reward
+//}
+//else{
+  #ifndef FILE_RLACT_PATH
+    #define FILE_RLACT_PATH "/data/video/usb/"     // for ardrone (ap)
+  #endif
+  #include "modules/detect_reward/detect_reward.h"
+//}
 
 //*************** DECLARE VARIABLES *****************//
 // environment and states for RL algorithm
@@ -86,7 +95,7 @@ int8_t falseposflag; // false positive reward detection
 	
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
-const int16_t del = 1;// distance to move in each action
+const double del = 0.75;// distance to move in each action
 static int32_t pass;
 
 // policy decisions - just random for now
@@ -173,10 +182,11 @@ else{
 	
 
 	// FOR flight test - use camera to detect flower
-  vs = detected_reward; //vs=1, detected flower; vs=0 nothing detected
+  if(!simnps){vs = detected_reward;}   //vs=1, detected flower; vs=0 nothing detected
+
   switch(state_curr){
 	case 2 :  case 22 : case 30 : // flowers
-		//vs = 1;   //for sim- define vision state based on location state
+    if(simnps){vs = 1;}  //for sim- define vision state based on location state
 	  if(vs==0) {  //false negative
        false_neg[state_curr]=false_neg[state_curr]+1;
        printf("false negative: reward detection missed at flower in state: %d",state_curr);
@@ -185,7 +195,7 @@ else{
 	case 35 :      // if in hive state
 		vs = 2;  break;  // assume perfect detection of hive
 	default :         // not a reward space (code done for random policy)
-		//vs = 0;  // for sim
+    if(simnps){vs = 0;}  // for sim
     if(vs==1) {  //false positive
        falseposflag = 1;
        false_pos[state_curr]=false_pos[state_curr]+1;
@@ -412,6 +422,21 @@ if(pass==11 || pass==101 || pass==151 || pass==201 || pass==251 || pass==301 || 
 		return FALSE;
 }  // end of rlact_run function
 
+
+///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
+/*** moves waypoint to state location with respect to WP_p00 */
+
+void setWP_wrt00(uint8_t wp_id,uint8_t reward_state_id){
+
+  //state must be between 0-35;  use for flower (2,22,30) and hive (35) states
+
+  drow = reward_state_id % ndim; // remainder = #increments to move in y from home
+  dcol = (int)reward_state_id/ndim;  // rounded down = #increments to move in x from home
+  my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
+  my_wp.y = waypoint_get_y(WP_p00) + drow*del;
+  waypoint_set_enu(wp_id, &my_wp);
+
+}
 
 /********************* hitsbounds subfunction *************/
 /*** determines if boundary is hit within a 6x6 grid environment */

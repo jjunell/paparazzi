@@ -65,7 +65,7 @@ struct image_t *colorfilter_func(struct image_t *img)
 
   uint8_t *img_buf = (uint8_t*)(img->buf);
   // print to see uyvy color of center pixel
- // printf("uyvy %d %d %d %d\n", img_buf[img->w * 2 * img->h/2 + img->w], img_buf[img->w * 2 * img->h/2 + img->w + 1], img_buf[img->w * 2 * img->h/2 + img->w + 2], img_buf[img->w * 2 * img->h/2 + img->w + 3]);
+// printf("uyvy %d %d %d %d\n", img_buf[img->w * 2 * img->h/2 + img->w], img_buf[img->w * 2 * img->h/2 + img->w + 1], img_buf[img->w * 2 * img->h/2 + img->w + 2], img_buf[img->w * 2 * img->h/2 + img->w + 3]);
 
   // Filter
   color_count = image_yuv422_colorfilt(img, img,

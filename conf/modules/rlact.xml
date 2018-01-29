@@ -5,7 +5,7 @@
     <description>
 	reinforcement learner chooses the quadrotor action and learns a V function based on rewards in environment
     </description>
-  </doc>
+	</doc>
   <header>
     <file name="rlact.h"/>
   </header>

@@ -36,6 +36,7 @@
 //******* FUNCTIONS ********//
 void rlact_init(void);
 extern bool rlact_run(uint8_t wpa, uint8_t wpb);
+extern void setWP_wrt00(uint8_t wp_id, uint8_t reward_state_id);
 int8_t hitsbounds(uint16_t state_curr, uint8_t act);  /* include with rlact.c_5 and higher*/
 int8_t chooseact(uint16_t state_curr, uint8_t ns_curr, uint16_t eps);  /* include with rlact.c_7 and higher*/
 //void rlact_periodic(void);
