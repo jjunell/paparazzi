@@ -624,7 +624,7 @@ static uint8_t *jpeg_huffman(JPEG_ENCODER_STRUCTURE *jpeg_encoder_structure, uin
   const uint16_t *DcCodeTable, *DcSizeTable, *AcCodeTable, *AcSizeTable;
 
   int16_t *Temp_Ptr, Coeff, LastDc;
-  uint16_t AbsCoeff, HuffCode, HuffSize, RunLength = 0, DataSize = 0, index;
+  uint16_t AbsCoeff, HuffCode, HuffSize, RunLength = 0, DataSize = 0,index_jpg;
 
   int16_t bits_in_next_word;
   uint16_t numbits;
@@ -691,9 +691,9 @@ static uint8_t *jpeg_huffman(JPEG_ENCODER_STRUCTURE *jpeg_encoder_structure, uin
         DataSize = bitsize [AbsCoeff >> 8] + 8;
       }
 
-      index = RunLength * 10 + DataSize;
-      HuffCode = AcCodeTable [index];
-      HuffSize = AcSizeTable [index];
+      index_jpg = RunLength * 10 + DataSize;
+      HuffCode = AcCodeTable [index_jpg];
+      HuffSize = AcSizeTable [index_jpg];
 
       Coeff &= (1 << DataSize) - 1;
       data = (HuffCode << DataSize) | Coeff;
@@ -884,7 +884,7 @@ static uint8_t *jpeg_write_markers(JPEG_ENCODER_STRUCTURE *jpeg_encoder_structur
     factor ranges from 1 to 8;  1 = highest quality,  8 = lowest quality */
 /*static void jpeg_initialize_quantization_tables(uint32_t quality_factor)
 {
-  uint16_t i, index;
+  uint16_t i, index_jpg;
   uint32_t value;
 
   if (quality_factor < 1) {
@@ -896,7 +896,7 @@ static uint8_t *jpeg_write_markers(JPEG_ENCODER_STRUCTURE *jpeg_encoder_structur
   quality_factor = ((quality_factor * 3) - 2) * 128; //converts range[1:8] to [1:22]
 
   for (i = 0; i < 64; i++) {
-    index = zigzag_table [i];
+    index_jpg = zigzag_table [i];
 
     // luminance quantization table * quality factor
     value = luminance_quant_table [i] * quality_factor;
@@ -908,7 +908,7 @@ static uint8_t *jpeg_write_markers(JPEG_ENCODER_STRUCTURE *jpeg_encoder_structur
       value = 255;
     }
 
-    Lqt [index] = (uint8_t) value;
+    Lqt [index_jpg] = (uint8_t) value;
     //ILqt [i] = DSP_Division (0x8000, value);
     ILqt [i] = 0x8000 / value;
 
@@ -922,7 +922,7 @@ static uint8_t *jpeg_write_markers(JPEG_ENCODER_STRUCTURE *jpeg_encoder_structur
       value = 255;
     }
 
-    Cqt [index] = (uint8_t) value;
+    Cqt [index_jpg] = (uint8_t) value;
     //ICqt [i] = DSP_Division (0x8000, value);
     ICqt [i] = 0x8000 / value;
   }

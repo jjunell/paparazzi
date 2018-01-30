@@ -52,7 +52,7 @@ uint8_t color_cr_min  = 180;
 uint8_t color_cr_max  = 255;
 
 // Result
-int color_count = 0;
+uint color_count = 0;
 
 #include "subsystems/abi.h"
 
@@ -63,9 +63,10 @@ struct image_t *colorfilter_func(struct image_t *img);
 struct image_t *colorfilter_func(struct image_t *img)
 {
 
-  uint8_t *img_buf = (uint8_t*)(img->buf);
-  // print to see uyvy color of center pixel
-// printf("uyvy %d %d %d %d\n", img_buf[img->w * 2 * img->h/2 + img->w], img_buf[img->w * 2 * img->h/2 + img->w + 1], img_buf[img->w * 2 * img->h/2 + img->w + 2], img_buf[img->w * 2 * img->h/2 + img->w + 3]);
+
+// print to see uyvy color of center pixel
+//   uint8_t *img_buf = (uint8_t*)(img->buf);
+//   printf("uyvy %d %d %d %d\n", img_buf[img->w * 2 * img->h/2 + img->w], img_buf[img->w * 2 * img->h/2 + img->w + 1], img_buf[img->w * 2 * img->h/2 + img->w + 2], img_buf[img->w * 2 * img->h/2 + img->w + 3]);
 
   // Filter
   color_count = image_yuv422_colorfilt(img, img,

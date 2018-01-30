@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
-<flight_plan alt="1.3" ground_alt="0" lat0="51.990624" lon0="4.376752" max_dist_from_home="20" name="Rotorcraft Delft rlact optitrack" security_height="0.3">
+<flight_plan alt="1.3" ground_alt="0" lat0="51.9906153" lon0="4.3767653" max_dist_from_home="20" name="Rotorcraft Delft rlact optitrack" security_height="0.3">
   <header>
 #include "autopilot.h"
   </header>
@@ -87,6 +87,8 @@
 	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
 	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
 	<call_once fun="setWP_wrt00(WP_hive,35)"/>
+	<call_once fun="NavSetWaypointHere(WP__p3)"/>
+	<stay wp="_p3"/>
     </block>
     <block name="learn_2acts">
     <exception cond="!GpsFixValid()" deroute="land here"/>

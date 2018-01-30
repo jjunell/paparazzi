@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
-<flight_plan alt="2" ground_alt="0" lat0="51.990624" lon0="4.376752" max_dist_from_home="150" name="Rotorcraft Delft rlact sim" security_height="1">
+<flight_plan alt="2" ground_alt="0" lat0="51.9906153" lon0="4.3767653" max_dist_from_home="150" name="Rotorcraft Delft rlact sim" security_height="1">
   <header>
 #include "autopilot.h"
   </header>
@@ -10,12 +10,12 @@
     <waypoint name="STDBY" x="0.0" y="0.0" height="1.5"/>
     <waypoint name="p1" x="0.0" y="0.0" height="1.5"/>
     <waypoint name="p2" x="0.0" y="0.0" height="1.5"/>
-    <waypoint name="p3" x="5.0" y="3.0" height="1.5"/>
-    <waypoint name="p00" x="-1.0" y="-1.0" height="1.5"/>
-    <waypoint name="fl1" lat="51.990629" lon="4.376760" height="1.5"/>
-    <waypoint name="fl2" lat="51.990629" lon="4.376760" height="1.5"/>
-    <waypoint name="fl3" lat="51.990629" lon="4.376760" height="1.5"/>
-    <waypoint name="hive" lat="51.990629" lon="4.376760" height="1.5"/>
+    <waypoint name="_p3" x="5.0" y="3.0" height="1.5"/>
+    <waypoint name="p00" x="0.0" y="0.0" height="1.5"/>
+    <waypoint name="fl1" x="0.0" y="2.0" height="1.5"/>
+    <waypoint name="fl2" x="0.0" y="2.0" height="1.5"/>
+    <waypoint name="fl3" x="0.0" y="2.0" height="1.5"/>
+    <waypoint name="hive" x="2.0" y="2.0" height="1.5"/>
     <waypoint name="TD" x="2.0" y="0.0"/>
   </waypoints>
   <blocks>
@@ -65,6 +65,8 @@
 	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
 	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
 	<call_once fun="setWP_wrt00(WP_hive,35)"/>
+	<call_once fun="NavSetWaypointHere(WP__p3)"/>
+	<stay wp="_p3"/>
     </block>
     <block name="learn_2acts">
     	<!--exception cond="GetPosAlt()>5" deroute="land here"/-->

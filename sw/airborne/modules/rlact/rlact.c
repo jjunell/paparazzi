@@ -89,6 +89,10 @@ FILE *file_falseneg, *file_falsepos;
 char filename_falsepos[200];
 char filename_falseneg[200];
 
+// reading in value function file
+FILE *file_Vin;
+char filename_Vin[200];
+
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
 const double del = 0.75;  // distance to move in each action
@@ -125,7 +129,7 @@ void rlact_init(void)
 
   act = 0;
   pass = 0;
-  eps = 0;
+  eps = 100;  // full greedy eps=100
 
   my_wp.z = NAV_DEFAULT_ALT;
 
@@ -143,6 +147,23 @@ void rlact_init(void)
   fclose(file_regw);
 
   printf("tert: %s\n", RLACT_FILEPATH);
+
+  printf("init4\n");
+  //initialize V to the values from given file.
+  sprintf(filename_Vin, "%sVin.txt", RLACT_FILEPATH);
+  file_Vin = fopen(filename_Vin, "r");
+  if (file_Vin == NULL) {
+    printf(
+        "Error! 'Vin.txt' NULL. No Value Function updates written to file.\n");
+  } else {
+    for (i = 0; i < ndim; i++) {
+      for (j = 0; j < nstates; j++) {
+        (void) fscanf(file_Vin, "%lf", &V[j][i]);
+      }
+    }  // end loops to read in Vin
+  }  //end security check
+  fclose(file_Vin);
+  printf("init5\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
@@ -331,10 +352,6 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         }
     }  // switch statement - reward function
 
-    //override stay in same nectar state:
-    ns_curr = 0;
-    ns_next = 0;
-
     /* Now with reward and next state calculated:
      1) update value function for current state using belman eqn
      2) take action in paparazzi sim/IRL
@@ -350,8 +367,9 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     printf(" Vnew= %.4f\n", V[state_curr][ns_curr]);
 
     ////////// update value function file ////////
-    if (pass == 11 || pass == 101 || pass == 151 || pass == 201 || pass == 251
-        || pass == 301 || pass == 351 || pass == 1001) {
+    if (pass == 11  || pass == 101 || pass == 151 || pass == 201 || pass == 251 ||
+        pass == 301 || pass == 351 || pass == 401 || pass == 501 || pass == 601 ||
+        pass == 701 || pass == 801 || pass == 901 || pass == 1001)  {
 
       // create a filename for file
       sprintf(filename_Vfcn, "%sVfcn%d.txt", RLACT_FILEPATH, (pass - 1));
@@ -381,7 +399,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
               fprintf(file_falseneg, "%d ", falseneg[j]);
             }
           }
-        }  // end loops to prfalseposfcn and kv in file
+        }  // end loops to print falsepos, Vfcn and kv in file
       }  //end security check
 
       fclose(file_Vfcn);
