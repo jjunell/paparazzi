@@ -80,6 +80,11 @@
       <exception cond="GetPosAlt()>5" deroute="land here"/>
       <stay wp="p2"/>
     </block>
+    <block name="stay_fl1">
+      <exception cond="!GpsFixValid()" deroute="land here"/>
+      <exception cond="GetPosAlt()>5" deroute="land here"/>
+      <stay wp="fl1"/>
+    </block>
    <block name="set_flowers">   <!-- sets flowers wrt wp_00-->
     	<exception cond="!GpsFixValid()" deroute="land here"/>
     	<exception cond="GetPosAlt()>5" deroute="land here"/>

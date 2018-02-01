@@ -209,7 +209,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
       case 30:  // flowers
         if (RLACT_NPS) {
           vs = 1;
-          printf("in simulated flower state");
+          printf("/in simulated flower state/ ");
         }  //for sim- define vision state based on location state
         if (vs == 0) {  //false negative
           ++falseneg[state_curr];
@@ -218,7 +218,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
               state_curr);
         }
         else {
-          printf("reward state succesfully detected in state: %d", state_curr);
+          printf("/reward state succesfully detected/");
         }
 
         break;
@@ -256,6 +256,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         // if action results in out-of-bounds, decrease reward, choose new action
         hbflag = hitsbounds(state_curr, act);
         while (hbflag) {
+          printf("//wallhit//");
           reward = reward - 1.0;
           act = chooseact(state_curr, ns_curr, eps);
           fprintf(file_act, "%d ", act);
@@ -367,7 +368,8 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     printf(" Vnew= %.4f\n", V[state_curr][ns_curr]);
 
     ////////// update value function file ////////
-    if (pass == 11  || pass == 101 || pass == 151 || pass == 201 || pass == 251 ||
+    if (pass == 11  || pass == 21  || pass == 31  || pass == 41  ||pass == 51  ||
+        pass == 101 || pass == 151 || pass == 201 || pass == 251 ||
         pass == 301 || pass == 351 || pass == 401 || pass == 501 || pass == 601 ||
         pass == 701 || pass == 801 || pass == 901 || pass == 1001)  {
 
@@ -567,7 +569,6 @@ int8_t hitsbounds(uint16_t state_curr_sf1, uint8_t act_sf1)
   }  //end switch east-west
 
   if (sol == 1) {
-    printf("..wallhit.. ");
     return 1;
   } else {
     return 0;
