@@ -52,7 +52,7 @@
    telemetry="telemetry/default_rotorcraft.xml"
    flight_plan="flight_plans/rotorcraft_rlact_sim.xml"
    settings="settings/rotorcraft_basic.xml"
-   settings_modules="modules/video_rtp_stream.xml modules/geo_mag.xml modules/air_data.xml modules/gps_ubx_ucenter.xml modules/ins_extended.xml modules/ahrs_int_cmpl_quat.xml modules/stabilization_int_quat.xml modules/nav_basic_rotorcraft.xml modules/guidance_rotorcraft.xml modules/gps.xml modules/imu_common.xml"
+   settings_modules="modules/video_rtp_stream.xml modules/cv_colorfilter.xml modules/ins_extended.xml modules/ahrs_int_cmpl_quat.xml modules/stabilization_indi_simple.xml modules/nav_basic_rotorcraft.xml modules/guidance_rotorcraft.xml modules/gps.xml modules/imu_common.xml"
    gui_color="#f7b3084c084c"
    release="4f95168b07005474c8fedf3be5c2f2b4f4c7c393"
   />

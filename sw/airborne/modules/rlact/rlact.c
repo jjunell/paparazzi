@@ -89,10 +89,6 @@ FILE *file_falseneg, *file_falsepos;
 char filename_falsepos[200];
 char filename_falseneg[200];
 
-// reading in value function file
-FILE *file_Vin;
-char filename_Vin[200];
-
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
 const double del = 0.75;  // distance to move in each action
@@ -129,7 +125,7 @@ void rlact_init(void)
 
   act = 0;
   pass = 0;
-  eps = 100;  // full greedy eps=100
+  eps = 0;
 
   my_wp.z = NAV_DEFAULT_ALT;
 
@@ -147,23 +143,6 @@ void rlact_init(void)
   fclose(file_regw);
 
   printf("tert: %s\n", RLACT_FILEPATH);
-
-  printf("init4\n");
-  //initialize V to the values from given file.
-  sprintf(filename_Vin, "%sVin.txt", RLACT_FILEPATH);
-  file_Vin = fopen(filename_Vin, "r");
-  if (file_Vin == NULL) {
-    printf(
-        "Error! 'Vin.txt' NULL. No Value Function updates written to file.\n");
-  } else {
-    for (i = 0; i < ndim; i++) {
-      for (j = 0; j < nstates; j++) {
-        (void) fscanf(file_Vin, "%lf", &V[j][i]);
-      }
-    }  // end loops to read in Vin
-  }  //end security check
-  fclose(file_Vin);
-  printf("init5\n");
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
@@ -209,7 +188,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
       case 30:  // flowers
         if (RLACT_NPS) {
           vs = 1;
-          printf("in simulated flower state");
+          printf("/in simulated flower state/ ");
         }  //for sim- define vision state based on location state
         if (vs == 0) {  //false negative
           ++falseneg[state_curr];
@@ -218,7 +197,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
               state_curr);
         }
         else {
-          printf("reward state succesfully detected in state: %d", state_curr);
+          printf("/reward state succesfully detected/");
         }
 
         break;
@@ -256,6 +235,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         // if action results in out-of-bounds, decrease reward, choose new action
         hbflag = hitsbounds(state_curr, act);
         while (hbflag) {
+          printf("//wallhit//");
           reward = reward - 1.0;
           act = chooseact(state_curr, ns_curr, eps);
           fprintf(file_act, "%d ", act);
@@ -352,6 +332,10 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         }
     }  // switch statement - reward function
 
+    //override stay in same nectar state:
+    ns_curr = 0;
+    ns_next = 0;
+
     /* Now with reward and next state calculated:
      1) update value function for current state using belman eqn
      2) take action in paparazzi sim/IRL
@@ -367,9 +351,26 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     printf(" Vnew= %.4f\n", V[state_curr][ns_curr]);
 
     ////////// update value function file ////////
-    if (pass == 11  || pass == 101 || pass == 151 || pass == 201 || pass == 251 ||
-        pass == 301 || pass == 351 || pass == 401 || pass == 501 || pass == 601 ||
-        pass == 701 || pass == 801 || pass == 901 || pass == 1001)  {
+    if (pass == 11  || pass == 21  || pass == 31  || pass == 41  || pass == 51  ||
+        pass == 61  || pass == 71  || pass == 81  || pass == 91  || pass == 101 ||
+        pass == 111 || pass == 121 || pass == 131 || pass == 141 || pass == 151 ||
+        pass == 161 || pass == 171 || pass == 181 || pass == 191 || pass == 201 ||
+        pass == 211 || pass == 221 || pass == 231 || pass == 241 || pass == 251 ||
+        pass == 261 || pass == 271 || pass == 281 || pass == 291 || pass == 301 ||
+        pass == 311 || pass == 321 || pass == 331 || pass == 341 || pass == 351 ||
+        pass == 361 || pass == 371 || pass == 381 || pass == 391 || pass == 401 ||
+        pass == 411 || pass == 421 || pass == 431 || pass == 441 || pass == 451 ||
+        pass == 461 || pass == 471 || pass == 481 || pass == 491 || pass == 501 ||
+        pass == 511 || pass == 521 || pass == 531 || pass == 541 || pass == 551 ||
+        pass == 561 || pass == 571 || pass == 581 || pass == 591 || pass == 601 ||
+        pass == 611 || pass == 621 || pass == 631 || pass == 641 || pass == 651 ||
+        pass == 661 || pass == 671 || pass == 681 || pass == 691 || pass == 701 ||
+        pass == 711 || pass == 721 || pass == 731 || pass == 741 || pass == 751 ||
+        pass == 761 || pass == 771 || pass == 781 || pass == 791 || pass == 801 ||
+        pass == 811 || pass == 821 || pass == 831 || pass == 841 || pass == 851 ||
+        pass == 861 || pass == 871 || pass == 881 || pass == 891 || pass == 901 ||
+        pass == 911 || pass == 921 || pass == 931 || pass == 941 || pass == 951 ||
+        pass == 961 || pass == 971 || pass == 981 || pass == 991 || pass == 1001 )  {
 
       // create a filename for file
       sprintf(filename_Vfcn, "%sVfcn%d.txt", RLACT_FILEPATH, (pass - 1));
@@ -411,12 +412,14 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     //execute in paparazzi sim/IRL
     switch (act) {
       case 0: /* no movement */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
 
         break;
       case 1: /* north */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -424,6 +427,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[0];
         break;
       case 2: /* east */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -431,6 +435,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[1];
         break;
       case 3: /* south */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -438,6 +443,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[2];
         break;
       case 4: /* west */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -445,6 +451,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[3];
         break;
       case 5: /* northwest */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -452,6 +459,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[4];
         break;
       case 6: /* northeast */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -459,6 +467,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[5];
         break;
       case 7: /* southeast */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -466,6 +475,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[6];
         break;
       case 8: /* southwest */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -475,12 +485,14 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
       case 9: /* special hive/flower random regeneration */
         drow = state_next % ndim;  // remainder = #increments to move in y from home
         dcol = (int) state_next / ndim;  // rounded down = #increments to move in x from home
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(WP_p00) + dcol * del;
         my_wp.y = waypoint_get_y(WP_p00) + drow * del;
         waypoint_set_enu(wpb, &my_wp);
 
         break;
       default: /* no movement */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -567,7 +579,6 @@ int8_t hitsbounds(uint16_t state_curr_sf1, uint8_t act_sf1)
   }  //end switch east-west
 
   if (sol == 1) {
-    printf("..wallhit.. ");
     return 1;
   } else {
     return 0;

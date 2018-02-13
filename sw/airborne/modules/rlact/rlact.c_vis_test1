@@ -351,9 +351,26 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     printf(" Vnew= %.4f\n", V[state_curr][ns_curr]);
 
     ////////// update value function file ////////
-    if (pass == 11  || pass == 51  || pass == 101 || pass == 151 || pass == 201 || pass == 251 ||
-        pass == 301 || pass == 351 || pass == 401 || pass == 501 || pass == 601 ||
-        pass == 701 || pass == 801 || pass == 901 || pass == 1001)  {
+    if (pass == 11  || pass == 21  || pass == 31  || pass == 41  || pass == 51  ||
+        pass == 61  || pass == 71  || pass == 81  || pass == 91  || pass == 101 ||
+        pass == 111 || pass == 121 || pass == 131 || pass == 141 || pass == 151 ||
+        pass == 161 || pass == 171 || pass == 181 || pass == 191 || pass == 201 ||
+        pass == 211 || pass == 221 || pass == 231 || pass == 241 || pass == 251 ||
+        pass == 261 || pass == 271 || pass == 281 || pass == 291 || pass == 301 ||
+        pass == 311 || pass == 321 || pass == 331 || pass == 341 || pass == 351 ||
+        pass == 361 || pass == 371 || pass == 381 || pass == 391 || pass == 401 ||
+        pass == 411 || pass == 421 || pass == 431 || pass == 441 || pass == 451 ||
+        pass == 461 || pass == 471 || pass == 481 || pass == 491 || pass == 501 ||
+        pass == 511 || pass == 521 || pass == 531 || pass == 541 || pass == 551 ||
+        pass == 561 || pass == 571 || pass == 581 || pass == 591 || pass == 601 ||
+        pass == 611 || pass == 621 || pass == 631 || pass == 641 || pass == 651 ||
+        pass == 661 || pass == 671 || pass == 681 || pass == 691 || pass == 701 ||
+        pass == 711 || pass == 721 || pass == 731 || pass == 741 || pass == 751 ||
+        pass == 761 || pass == 771 || pass == 781 || pass == 791 || pass == 801 ||
+        pass == 811 || pass == 821 || pass == 831 || pass == 841 || pass == 851 ||
+        pass == 861 || pass == 871 || pass == 881 || pass == 891 || pass == 901 ||
+        pass == 911 || pass == 921 || pass == 931 || pass == 941 || pass == 951 ||
+        pass == 961 || pass == 971 || pass == 981 || pass == 991 || pass == 1001 )  {
 
       // create a filename for file
       sprintf(filename_Vfcn, "%sVfcn%d.txt", RLACT_FILEPATH, (pass - 1));
@@ -395,12 +412,14 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     //execute in paparazzi sim/IRL
     switch (act) {
       case 0: /* no movement */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
 
         break;
       case 1: /* north */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -408,6 +427,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[0];
         break;
       case 2: /* east */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -415,6 +435,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[1];
         break;
       case 3: /* south */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -422,6 +443,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[2];
         break;
       case 4: /* west */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -429,6 +451,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[3];
         break;
       case 5: /* northwest */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -436,6 +459,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[4];
         break;
       case 6: /* northeast */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -443,6 +467,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[5];
         break;
       case 7: /* southeast */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -450,6 +475,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[6];
         break;
       case 8: /* southwest */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -459,12 +485,14 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
       case 9: /* special hive/flower random regeneration */
         drow = state_next % ndim;  // remainder = #increments to move in y from home
         dcol = (int) state_next / ndim;  // rounded down = #increments to move in x from home
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(WP_p00) + dcol * del;
         my_wp.y = waypoint_get_y(WP_p00) + drow * del;
         waypoint_set_enu(wpb, &my_wp);
 
         break;
       default: /* no movement */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);

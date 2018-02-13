@@ -413,12 +413,14 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     //execute in paparazzi sim/IRL
     switch (act) {
       case 0: /* no movement */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
 
         break;
       case 1: /* north */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -426,6 +428,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[0];
         break;
       case 2: /* east */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -433,6 +436,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[1];
         break;
       case 3: /* south */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -440,6 +444,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[2];
         break;
       case 4: /* west */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
@@ -447,6 +452,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[3];
         break;
       case 5: /* northwest */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -454,6 +460,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[4];
         break;
       case 6: /* northeast */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa) + del;
         waypoint_set_enu(wpb, &my_wp);
@@ -461,6 +468,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[5];
         break;
       case 7: /* southeast */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) + del;
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -468,6 +476,7 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
         ++ka[6];
         break;
       case 8: /* southwest */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa) - del;
         my_wp.y = waypoint_get_y(wpa) - del;
         waypoint_set_enu(wpb, &my_wp);
@@ -477,12 +486,14 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
       case 9: /* special hive/flower random regeneration */
         drow = state_next % ndim;  // remainder = #increments to move in y from home
         dcol = (int) state_next / ndim;  // rounded down = #increments to move in x from home
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(WP_p00) + dcol * del;
         my_wp.y = waypoint_get_y(WP_p00) + drow * del;
         waypoint_set_enu(wpb, &my_wp);
 
         break;
       default: /* no movement */
+        my_wp.z = waypoint_get_alt(WP_p00);
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
