@@ -1,0 +1,16 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="detect_reward">
+  <doc>
+    <description>Detect if there is a reward in view by if a certain color is over a threshold in the bottom facing view </description>
+  </doc>
+  <depends>cv_colorfilter.xml</depends>
+  <header>
+    <file name="detect_reward.h"/>
+  </header>
+  <init fun="detect_reward_init()"/>
+  <periodic fun="detect_reward_periodic()" freq="10"/>
+  <makefile>
+    <file name="detect_reward.c"/>
+  </makefile>
+</module>

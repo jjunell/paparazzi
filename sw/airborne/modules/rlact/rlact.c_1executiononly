@@ -1,0 +1,136 @@
+/*
+ * Copyright (C) 2008-2012 The Paparazzi Team
+ *
+ * This file is part of paparazzi.
+ *
+ * paparazzi is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * paparazzi is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ 
+ * You should have received a copy of the GNU General Public License
+ * along with paparazzi; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ */
+ 
+ /* This module creates a flight plan callable function to learn high level guidance via reinforcement learning.  written by Jaime Junell */
+
+#include "rlact.h"
+#include "generated/airframe.h"
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "pprzlink/messages.h"
+#include "mcu_periph/uart.h"
+#include "subsystems/datalink/downlink.h"
+#include "generated/flight_plan.h"  //needed to use WP_HOME
+
+//*************** DECLARE VARIABLES *****************//
+struct EnuCoor_f my_wp;
+const int16_t del = 1;// distance to move in each action
+int8_t act;
+
+//*********************** FUNCTIONS ***********************//
+void rlact_init(void) {
+//initialize variables
+printf("init1\n");
+	act= 0; 
+	my_wp.z = NAV_DEFAULT_ALT;
+
+printf("init2\n");
+	srand(time(NULL)); //initialize random number generator just once
+printf("init3\n");
+  //  const int nact = 4; //number of actions = 4 (NESW)
+
+}
+
+///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
+bool rlact_run(uint8_t wpa, uint8_t wpb){
+
+ printf("started\n");
+
+	//act = (rand() % 8)+1;
+	act = 0;
+
+    	//execute in paparazzi sim/IRL
+	switch (act){
+	        case 0: /* no movement */
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa);
+	        waypoint_set_enu(wpb, &my_wp);
+		printf("act = %d\n",act);
+		break;
+		case 1: /* north */
+        	my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+		++ka[0];
+		break;
+		case 2: /* east */
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+		++ka[1];
+		break;
+		case 3: /* south */
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+		++ka[2];
+		break;      
+		case 4: /* west */
+		my_wp.x = waypoint_get_x(wpa) - del;
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+		++ka[3];
+		break;    
+		case 5: /* northwest */
+		my_wp.x = waypoint_get_x(wpa) - del;    
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+		++ka[4];
+		break;
+		case 6: /* northeast */
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa) + del;
+		waypoint_set_enu(wpb, &my_wp);
+	 			printf("act = %d\n",act);
+		++ka[5];
+		break;
+		case 7: /* southeast */
+		my_wp.x = waypoint_get_x(wpa) + del;
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+		++ka[6];
+		break;      
+		case 8: /* southwest */
+		my_wp.x = waypoint_get_x(wpa) - del;
+		my_wp.y = waypoint_get_y(wpa) - del;
+		waypoint_set_enu(wpb, &my_wp);
+				 printf("act = %d\n",act);
+//		++ka[7];
+		break;
+		default: /* no movement */
+		my_wp.x = waypoint_get_x(wpa);
+		my_wp.y = waypoint_get_y(wpa);
+		waypoint_set_enu(wpb, &my_wp);
+		printf("default action stay still: no valid action taken\n");
+		break;
+	}
+		return FALSE;
+}  // end of rlact_run function
+

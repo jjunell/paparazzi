@@ -194,3 +194,7 @@ tests/results/*
 
 # K-develop
 *.kate-swp
+
+
+# Jaime's additions
+parrot-tools-linuxgnutools-2012.03_1.0.0-1_i386.deb
