@@ -1,0 +1,5 @@
+Q-learning HRL with options
+
+Start from simpler functions:
+1) 
+

@@ -166,7 +166,9 @@ bool rlact_run(uint8_t wpa, uint8_t wpb)
     fprintf(file_reg, "%d ", state_curr);
     fclose(file_reg);
 
-  } else {
+  } 
+
+else {
     //choose initial action and print to appendable file
     act = chooseact(state_curr, ns_curr, eps);
     file_act = fopen(filename_act, "a");
