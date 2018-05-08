@@ -1,0 +1,16 @@
+<!DOCTYPE module SYSTEM "module.dtd">
+
+<module name="hrl">
+  <doc>
+    <description>
+	hierarchical reinforcement learning with options learns a quadoroter honeybee task
+    </description>
+	</doc>
+  <header>
+    <file name="hrl.h"/>
+  </header>
+  <init fun="hrl_init()"/>
+  <makefile>
+    <file name="hrl.c"/>
+  </makefile>
+</module>

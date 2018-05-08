@@ -20,7 +20,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
- /* This module creates a flight plan callable function to learn high level guidance via reinforcement learning.  written by Jaime Junell */
+/* This module creates a flight plan callable function to learn high level guidance via reinforcement learning.  written by Jaime Junell */
 
 #include "hrl.h"
 #include "generated/airframe.h"
@@ -33,161 +33,182 @@
 #include "subsystems/datalink/downlink.h"
 #include "generated/flight_plan.h"  //needed to use WP_HOME
 
+/** Set the default File logger path to the USB drive for ardrone, other for */
+#if RLACT_NPS
+#define RLACT_FILEPATH "./sw/airborne/modules/hrl/"   // for simulation (nps)
+const int8_t detected_reward;
+#else
+#define RLACT_FILEPATH "/data/video/usb/"     // for ardrone (ap)
+#include "modules/detect_reward/detect_reward.h"
+
+#endif
+
+
+
 //*************** DECLARE VARIABLES *****************//
 // environment and states for RL algorithm
 int8_t drow, dcol;
-int8_t state_curr, state_next;
-int8_t ns_curr, ns_next;//nectar state 0-3 (base 0)
-int8_t lvs_curr, lvs_next;//history state 0-3 (0 = hive, 1=F1, 2=F2, 3=F3)
-const int8_t nns = 3;  //last nectar state (base 0)
-const int8_t ndim = 6; //number of elements in a dimension = 6 (nrows,ncols, nns)
+int8_t state_curr, state_next, state_opt0;
+int8_t ns_curr, ns_next, ns_opt0;   //nectar state 0-3 (base 0)
+int8_t lvs_curr, lvs_next, lvs_opt0;    //history state 0-3 (0 = hive, 1=F1, 2=F2, 3=F3)
+const int8_t Nns = 3;  //last nectar state (base 0)
+const int8_t nlvs = 4;  //number lvs (states)
+const int8_t ndim = 6; //number of elements in a dimension = 6 (nrows,ncols)
 const int8_t nstates=36; //=ndim*ndim
 
 // flags
 int8_t nsflag;  //nectar state flag = nectar full
 int8_t hbflag;      //hitbounds flag
+int8_t optflag;   //option terminal flag
 
 // Bellman equation
-    double Q_old, alpha;
-    const double belgam = 0.9;  // gamma for belman equation
-    static double Q[36][4][4]= {{0}}; // Q Value function initialized to zeros
-    static int k[36][4][4]= {{0}}; // number of times a state has been visited
-    static int ka[4]= {0};  //number of times an action has been taken, initialized as 0
-  double reward;
+double Q_old, alpha;
+const double belgam = 0.9;  // gamma for belman equation
+static double Q[36][4][4][8]= {0}; // Q Value function initialized to zeros
+static int kq[36][4][4][8]= {0}; // number of times a state has been visited
+static int ka[4]= {0};  //number of times an action has been taken, initialized as 0
+double reward;
+const double rhive[4] = { 0 , 1 , 11.3137 , 46.7654 };  //reward at hive as function of ns (=ns^3.5).
+
+// Storing Q value function:
+FILE *file_Qfcn, *file_kq;
+FILE *file_reg, *file_regw, *file_actw, *file_act;
+
+int16_t i, j, k, n;
+
+char filename_regen[200];
+char filename_act[200];
+char filename_Qfcn[200];
+char filename_kq[200];
+
 
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
-const int16_t del = 1;// distance to move in each action
+const double del = .75;// distance to move in each action
 static int32_t pass;
+static int32_t idec;
 
-// policy decisions - just random for now
-const int8_t nact = 8; //number of actions possible (NESW + diagonals)
-int8_t act; opt
+// policy decisions
+const int8_t nopt = 8; //number of actions possible (NESW + diagonals)
+int8_t act, opt;
 int16_t eps;  //eps=0 is random, eps=100 is full greedy.
+int8_t optT0;
+double optr;
+
+// nectar time counter
+const int16_t tfnr = 12;
+static int fnr_count[4] = {15};
 
 // subfunctions
-//int8_t hitsbounds(uint16_t state_curr_sf1, uint8_t act_sf1)
-
-//int8_t chooseact(uint16_t state_curr_sf2, uint8_t ns_curr_sf2 ,uint8_t nact_sf2, uint16_t eps_sf2)
-int8_t a,i,act_sf2;
-//int8_t index[8] = {-1};
-double Vact[8], max;
+static int8_t a ;
+static int8_t opt_sf2;
+int8_t opt_sf3 , optT0_sf3 , a_sf3;
+static double max;
 
 
 //*********************** FUNCTIONS ***********************//
 void hrl_init(void) {
-//initialize variables
-printf("init1\n");
-  state_curr = 0;
+
+  //initialize variables
+  printf("init1: begin hrl_init\n");
+  state_curr = 0;  //p00
   state_next = 0;
-  ns_curr = 0;
+  ns_curr = 0;      //no nectar
   ns_next = 0;
-  lvs_curr = 0;
+  lvs_curr = 0;     //last visited hive
   lvs_next = 0;
+
+  state_opt0 = 0;
+  ns_opt0 = 0;
+  lvs_opt0 = 0;
 
   nsflag = 0;
   hbflag = 0;
 
+  optflag = 1;  // option termination flag
+  optT0 = 1;
+
   reward = 0.0;
 
-  opt=0;
-  act=0;
-  pass=0;
-  eps=0;
+  opt = 0;
+  act = 0;
+  pass = 0;
+  idec = 0;
+  eps = 0;
+
+  printf("init2: initialized variables \n");
 
   my_wp.z = NAV_DEFAULT_ALT;
 
-printf("init2\n");
+
+
   srand(time(NULL)); //initialize random number generator just once
-printf("init3\n");
+
+  printf("init3: \n");
+
 }
 
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
-bool rlact_run(uint8_t wpa, uint8_t wpb){
-pass++;
-// printf("pass = %d\n",pass);
+bool hrl_run(uint8_t wpa, uint8_t wpb){
+  pass++;
+  printf("pass %d:  ",pass);
 
-// first pass?  choose initial state randomly, and move wpb wrt p00
-if(pass==1){
+  /* first pass?  init state is hive, and move wpb wrt p00 */
+  if(pass==1){
 
-  state_curr = rand() % nstates; //Random state between 0-35;
-  drow = state_curr % ndim; // remainder = #increments to move in y from home
-  dcol = (int)state_curr/ndim;  // rounded down = #increments to move in x from home
-  my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
-  my_wp.y = waypoint_get_y(WP_p00) + drow*del;
-  waypoint_set_enu(wpb, &my_wp);
-    printf("first pass. del = %d\n",del);
+    state_curr = 35; //init at hive
+    drow = state_curr % ndim; // remainder = #increments to move in y from home
+    dcol = (int)state_curr/ndim;  // rounded down = #increments to move in x from home
+    my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
+    my_wp.y = waypoint_get_y(WP_p00) + drow*del;
+    waypoint_set_enu(wpb, &my_wp);
+    printf("first pass. del = %f\n",del);
   }
-else{
-  //choose initial option
-  opt = chooseopt(state_curr, ns_curr,lvs_curr,eps);
-  printf("state = %d, ns= %d, visit# %d, Qold= %.4f, ",state_curr, ns_curr, k[state_curr][ns_curr][lvs_curr],Q[state_curr][ns_curr][lvs_curr]);
+  else{
+
+    printf("state = %d, lvs= %d,  ns= %d\n", state_curr, lvs_curr, ns_curr);
+
+    //choose option if optflag
+    if(optflag){
+      opt = chooseopt(state_curr , lvs_curr , ns_curr  , eps);
+      optT0 = 1;
+      optflag = 0;
+      idec++;
+
+      printf("option = %d\n",opt);
+
+      //remember initial state of option
+      state_opt0 = state_curr;
+      lvs_opt0 = lvs_curr;
+      ns_opt0 = ns_curr;
+      optr = 0;  //cumulated reward starts at 0
+
+    }
+
+    //choose primitive action based on option (hardcoded in subfunction for optionset A3d)
+    act = primact(opt, optT0);
+    printf("act = %d\n",act);
+
+    // flag if option is terminated (hardcoded for optionset A3d)
+    switch(opt){
+      case 1 :  case 2 :  case 3 :  case 4 :
+        if(optT0==2){optflag = 1;}
+        break;
+      case 5 :  case 6 :  case 7 :  case 8 :
+        if(optT0==3){optflag = 1;}
+        break;
+      default :
+        printf("warning: no valid option selected. Check for error here in hrl.c\n"); break;
+    }
 
 
-  //choose primitive action based on option
-
-
-  // give rewards for current state and calculate next state
-  switch(state_curr){
-  case 2 :  case 22 : case 30 : // flowers
-    reward = 8.0;
-    ns_next = ns_curr + 1;
-    nsflag = 0;
-
-      if(ns_next>nns){ //if full of nectar, no reward
-        ns_next = nns;
-        reward = 0.0;
-        nsflag = 1;
-      }
-      // if action results in out-of-bounds, decrease reward, choose new action
-      hbflag = hitsbounds(state_curr, act);
-      while(hbflag){
-        reward = reward - 1.0;
-        act = chooseact(state_curr, ns_curr, eps);
-        hbflag =  hitsbounds(state_curr, act);
-      }
-
-    // calculate next state
-      // if random policy or last nectar state, execute actions
-      // if ep-greedy then randomly generate anywhere on the board
-      if(nsflag || eps==0){
-        switch(act){
-        case 1: state_next = state_curr + 1; break;    //north
-        case 2: state_next = state_curr + ndim; break; //east
-        case 3: state_next = state_curr -1; break;     //south
-        case 4: state_next = state_curr - ndim; break; //west
-        case 5: state_next = state_curr + 1 - ndim; break;  //northwest
-        case 6: state_next = state_curr + 1 + ndim; break;  //northeast
-        case 7: state_next = state_curr - 1 + ndim; break;  //southeast
-        case 8: state_next = state_curr - 1 - ndim; break;  //southwest
-      }
-      }
-      else {  //if ep-greedy (eps>0)
-        state_next = rand() % nstates;
-      }
-    break;
-
-  case 35 :      // if in hive state
-    reward = 0.99*(double)ns_curr*(double)ns_curr;  //hive reward function base 0
-    // reset at nectar state 0, and a random grid location.
-    ns_next = 0;
-    lvs_next = 0;
-    state_next = rand() % nstates;
-    act = 9; //special hive implementation for random regeneration
-    break;
-
-  default :         // not a reward space (code done for random policy)
-  // if not in reward spot: check if boundary is hit, if so give negative reward and stay in same state, otherwise, calculate next state and give no reward.
-    reward = 0.0;
-    ns_next = ns_curr;
-    lvs_next = lvs_curr;
-
+    // flag if action results in hiting the boundary
     hbflag = hitsbounds(state_curr, act);
+
+
+    //calculate next location state
     if(hbflag){
-      reward = -1.0;
       state_next = state_curr;
-      printf("\n hitbound with act = %d; therefore stay still\n",act);
-      act = 0;  // special action for not moving; (not really a chosen action, but needed for implemention in paparazzi.)
     }
     else{
       switch(act){
@@ -195,177 +216,333 @@ else{
         case 2: state_next = state_curr + ndim; break; //east
         case 3: state_next = state_curr -1; break;     //south
         case 4: state_next = state_curr - ndim; break; //west
-      }
+        default :
+          printf("warning: no valid primitive action selected. Check for error here in hrl.c\n"); break;
+      }  //switch act
+    }  // calculate next location state
+
+
+    // Env: calculate (t+1) reward and next xlv and xns states
+    if(ns_curr<Nns && state_next==22 && fnr_count[1]>tfnr){
+      //at flower 1 and there is nectar
+      reward = -1;
+      ns_next = ns_curr + 1;
+      lvs_next = 1;
+
+      fnr_count[1] = 0;
+      optflag = 1;
+      printf("F1 next state \n");
     }
-    } // switch statement - reward function
+    else if(ns_curr<Nns && state_next==2 && fnr_count[2]>tfnr){
+      //at flower 2 and there is nectar
+      reward = -1;
+      ns_next = ns_curr + 1;
+      lvs_next = 2;
+
+      fnr_count[2] = 0;
+      optflag = 1;
+      printf("F2 next state \n");
+    }
+    else if(ns_curr<Nns && state_next==30 && fnr_count[3]>tfnr){
+      //at flower 3 and there is nectar
+      reward = -1;
+      ns_next = ns_curr + 1;
+      lvs_next = 3;
+
+      fnr_count[3] = 0;
+      optflag = 1;
+      printf("F3 next state \n");
+    }
+    else if((state_next==35) && (ns_curr>0)){
+      //at hive and there is nectar to collect reward
+      reward = rhive[ns_curr];  //hive reward function base 0
+      ns_next = 0;
+      lvs_next = 0;
+      optflag = 1;
+      printf("hive next state \n");
+    }
+    else{
+      // If we haven't hit a reward spot, then
+      reward = -1;
+      ns_next = ns_curr;
+      lvs_next = lvs_curr;
+    }
+
+    if(hbflag){
+      // if wall hit then reward overwritten
+      reward = -3;
+      printf("\n hitbound with act = %d; therefore stay still\n",act);
+      act = 0;  // special action for not moving; (not really a chosen action, but needed for implemention in paparazzi.)
+      optflag = 1;
+    }
+
+    optr = optr + reward;  // cumulated reward for option
 
 
-/* Now with reward and next state calculated:
+    /* Now with reward and next state calculated:
    1) update Q value function for current state using belman eqn
    2) take action in paparazzi sim/IRL
    3) reset "next state" to "current state" for next iteration */
 
-    // update Value function
-    Q_old = Q[state_curr][ns_curr][lvs_curr];
-     ++k[state_curr][ns_curr];
-     alpha = 1.0/(double)k[state_curr][ns_curr][lvs_curr];
-    Q[state_curr][ns_curr][lvs_curr] = Q_old + alpha*(reward + belgam* Q[state_next][ns_next][lvs_next] - Q_old);
-  printf(" Qnew= %.4f\n",Q[state_curr][ns_curr][lvs_curr]);
+    // update Q
+    // if option is terminal or flower/hive found
+    if(optflag){
+      Q_old = Q[state_opt0][lvs_opt0][ns_opt0][opt];
+      ++kq[state_opt0][lvs_opt0][ns_opt0][opt];
+      alpha =  0.3 ; //1.0/(double pow((double)k[state_opt0][lvs_opt0][ns_opt0][opt], double .25));
+      Q[state_opt0][lvs_opt0][ns_opt0][opt] = Q_old + alpha*(reward + belgam* Q[state_next][lvs_next][ns_next][opt] - Q_old);
+      printf("end option %d from state [ %d, %d, %d ], reward = %.4f\n", opt, state_opt0, lvs_opt0, ns_opt0, optr);
+      printf(" Qold = %.4f,  Qnew= %.4f\n", Q_old, Q[state_opt0][lvs_opt0][ns_opt0][opt]);
+    }
+    ////////// update value function file ////////
+    if (pass == 11  || pass == 21  || pass == 31  || pass == 41  || pass == 51  ||
+        pass == 61  || pass == 71  || pass == 81  || pass == 91  || pass == 101 ||
+        pass == 111 || pass == 121 || pass == 131 || pass == 141 || pass == 151 ||
+        pass == 161 || pass == 171 || pass == 181 || pass == 191 || pass == 201 ||
+        pass == 211 || pass == 221 || pass == 231 || pass == 241 || pass == 251 ||
+        pass == 261 || pass == 271 || pass == 281 || pass == 291 || pass == 301 ||
+        pass == 311 || pass == 321 || pass == 331 || pass == 341 || pass == 351 ||
+        pass == 361 || pass == 371 || pass == 381 || pass == 391 || pass == 401 ||
+        pass == 411 || pass == 421 || pass == 431 || pass == 441 || pass == 451 ||
+        pass == 461 || pass == 471 || pass == 481 || pass == 491 || pass == 501 ||
+        pass == 511 || pass == 521 || pass == 531 || pass == 541 || pass == 551 ||
+        pass == 561 || pass == 571 || pass == 581 || pass == 591 || pass == 601 ||
+        pass == 611 || pass == 621 || pass == 631 || pass == 641 || pass == 651 ||
+        pass == 661 || pass == 671 || pass == 681 || pass == 691 || pass == 701 ||
+        pass == 711 || pass == 721 || pass == 731 || pass == 741 || pass == 751 ||
+        pass == 761 || pass == 771 || pass == 781 || pass == 791 || pass == 801 ||
+        pass == 811 || pass == 821 || pass == 831 || pass == 841 || pass == 851 ||
+        pass == 861 || pass == 871 || pass == 881 || pass == 891 || pass == 901 ||
+        pass == 911 || pass == 921 || pass == 931 || pass == 941 || pass == 951 ||
+        pass == 961 || pass == 971 || pass == 981 || pass == 991 || pass == 1001 )
+    {
 
-      //execute in paparazzi sim/IRL
-  switch (act){
-          case 0: /* no movement */
-    my_wp.x = waypoint_get_x(wpa);
-    my_wp.y = waypoint_get_y(wpa);
-          waypoint_set_enu(wpb, &my_wp);
-    printf("act = %d\n",act);
-    break;
-    case 1: /* north */
-          my_wp.x = waypoint_get_x(wpa);
-    my_wp.y = waypoint_get_y(wpa) + del;
-    waypoint_set_enu(wpb, &my_wp);
-         printf("act = %d\n",act);
-    ++ka[0];
-    break;
-    case 2: /* east */
-    my_wp.x = waypoint_get_x(wpa) + del;
-    my_wp.y = waypoint_get_y(wpa);
-    waypoint_set_enu(wpb, &my_wp);
-         printf("act = %d\n",act);
-    ++ka[1];
-    break;
-    case 3: /* south */
-    my_wp.x = waypoint_get_x(wpa);
-    my_wp.y = waypoint_get_y(wpa) - del;
-    waypoint_set_enu(wpb, &my_wp);
-         printf("act = %d\n",act);
-    ++ka[2];
-    break;
-    case 4: /* west */
-    my_wp.x = waypoint_get_x(wpa) - del;
-    my_wp.y = waypoint_get_y(wpa);
-    waypoint_set_enu(wpb, &my_wp);
-         printf("act = %d\n",act);
-    ++ka[3];
-    break;
-    case 9:  /* special hive/flower random regeneration */
-    drow = state_next % ndim; // remainder = #increments to move in y from home
-    dcol = (int)state_next/ndim;  // rounded down = #increments to move in x from home
-    my_wp.x = waypoint_get_x(WP_p00) + dcol*del;
-    my_wp.y = waypoint_get_y(WP_p00) + drow*del;
-    waypoint_set_enu(wpb, &my_wp);
-    printf("act = %d\n",act);
-    break;
-    default: /* no movement */
-    my_wp.x = waypoint_get_x(wpa);
-    my_wp.y = waypoint_get_y(wpa);
-    waypoint_set_enu(wpb, &my_wp);
-    state_next = state_curr; ns_next = ns_curr;
-    printf("default action stay still: no valid action taken\n");
-    break;
-  }
+      // create a filename for file
+      sprintf(filename_Qfcn, "%sQfcn%d.txt", RLACT_FILEPATH, (pass - 1));
+      sprintf(filename_kq, "%sk%d.txt", RLACT_FILEPATH, (pass - 1));
+
+      // open the file
+      file_Qfcn = fopen(filename_Qfcn, "w");
+      file_kq = fopen(filename_kq, "w");
+      if (file_Qfcn == NULL) {
+        printf(
+            "Error! 'Qfcn.txt' NULL. No Value Function updates written to file.\n");
+      }
+
+      else {
+        for (n = 0; i < nopt; n++) {
+          for (k = 0; j < Nns+1; k++) {
+            for (i = 0; i < nlvs; i++) {
+              for (j = 0; j < nstates; j++) {
+                //fprintf(file_Qfcn, "%.10f ", Q[j][i][k][n]);
+                fprintf(file_kq, "%d ", kq[j][i][k][n]);
+              }
+            }
+          }
+        }  // end loops to print falsepos, Qfcn and kv in file
+      }  //end security check
+    } // end print value function to file
 
 
-  // reset "next state" to "current state" for next iteration
-  state_curr = state_next;
-  ns_curr = ns_next;
+    //execute primitive action in paparazzi sim/IRL
+    switch (act){
+      case 0: /* no movement */
+        my_wp.x = waypoint_get_x(wpa);
+        my_wp.y = waypoint_get_y(wpa);
+        waypoint_set_enu(wpb, &my_wp);
+        break;
+      case 1: /* north */
+        my_wp.x = waypoint_get_x(wpa);
+        my_wp.y = waypoint_get_y(wpa) + del;
+        waypoint_set_enu(wpb, &my_wp);
+        ++ka[0];
+        break;
+      case 2: /* east */
+        my_wp.x = waypoint_get_x(wpa) + del;
+        my_wp.y = waypoint_get_y(wpa);
+        waypoint_set_enu(wpb, &my_wp);
+        ++ka[1];
+        break;
+      case 3: /* south */
+        my_wp.x = waypoint_get_x(wpa);
+        my_wp.y = waypoint_get_y(wpa) - del;
+        waypoint_set_enu(wpb, &my_wp);
+        ++ka[2];
+        break;
+      case 4: /* west */
+        my_wp.x = waypoint_get_x(wpa) - del;
+        my_wp.y = waypoint_get_y(wpa);
+        waypoint_set_enu(wpb, &my_wp);
 
-} //if not first pass
+        ++ka[3];
+        break;
+      default: /* no movement */
+        my_wp.x = waypoint_get_x(wpa);
+        my_wp.y = waypoint_get_y(wpa);
+        waypoint_set_enu(wpb, &my_wp);
+        state_next = state_curr; ns_next = ns_curr; lvs_next = lvs_curr;
+        printf("default action stay still: no valid action taken\n");
+        break;
+    }
 
-    return FALSE;
-}  // end of rlact_run function
 
+    // reset "next state" to "current state" for next iteration
+    state_curr = state_next;
+    ns_curr = ns_next;
+    lvs_curr = lvs_next;
+
+    optT0++;
+
+    fnr_count[1]++;
+    fnr_count[2]++;
+    fnr_count[3]++;
+
+
+
+
+  } //if not first pass
+  return FALSE;
+
+} // end of hrl_run function
+
+
+///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
+/*** moves waypoint to state location with respect to WP_p00 */
+
+void setWP_wrt00(uint8_t wp_id, uint8_t reward_state_id)
+{
+
+  //state must be between 0-35;  use for flower (2,22,30) and hive (35) states
+
+  drow = reward_state_id % ndim;  // remainder = #increments to move in y from home
+  dcol = (int) reward_state_id / ndim;  // rounded down = #increments to move in x from home
+  my_wp.x = waypoint_get_x(WP_p00) + dcol * del;
+  my_wp.y = waypoint_get_y(WP_p00) + drow * del;
+  waypoint_set_enu(wp_id, &my_wp);
+
+}
 
 /********************* hitsbounds subfunction *************/
 /*** determines if boundary is hit within a 6x6 grid environment */
 /*** inputs: current state, action *** output: 1/0 integer */
 int8_t hitsbounds(uint16_t state_curr_sf1, uint8_t act_sf1){
-    drow = state_curr_sf1 % 6; //= #increments current state is from home in y
+  drow = state_curr_sf1 % 6; //= #increments current state is from home in y
   dcol = (int)state_curr_sf1/6;  //= #increments current state is from home in x
 
-    int sol = 0;
-    switch(act_sf1){  //going north or south?
-      case 1 : case 5 : case 6 :  //north, northwest, northeast
+  int sol = 0;
+  switch(act_sf1){  //going north or south?
+    case 1 : case 5 : case 6 :  //north, northwest, northeast
       if(drow>=(6-1)){sol =1;}
       break;
-      case 3 : case 7 : case 8 : //south, southeast, southwest
+    case 3 : case 7 : case 8 : //south, southeast, southwest
       if(drow==0){sol =1;}
       break;
-    } //end switch north-south
+    default :
+      break;
+  } //end switch north-south
 
-    switch(act_sf1){  //going east or west?
-      case 2 : case 6 : case 7 : //east, northeast, southeast
+  switch(act_sf1){  //going east or west?
+    case 2 : case 6 : case 7 : //east, northeast, southeast
       if(dcol>=(6-1)){sol =1;}
       break;
-      case 4 : case 5 : case 8 : //west, northwest, southwest
+    case 4 : case 5 : case 8 : //west, northwest, southwest
       if(dcol==0){sol =1;}
       break;
-    } //end switch east-west
+    default :
+      break;
+  } //end switch east-west
 
-    if(sol==1){return 1;}
-    else{return 0;}
+  if(sol==1){return 1;}
+  else{return 0;}
 }
 
-/********************* chooseact subfunction *************/
+/********************* chooseopt subfunction *************/
 /*** chooses an option between 1-8 to take.  */
-/*** input: Value function, policy, current state, nectar state*/
-/*** output: option 1-8 */
-int8_t chooseopt(uint16_t state_curr_sf2, uint8_t ns_curr_sf2 , uint16_t eps_sf2){
-//int8_t a,i,act_sf2;
-//double Vact[8], max;
-//Declare up above instead of inside.  and give them different names so they are not shadowed?
-// question: why don't I have to bring in Q[36][6], or nact, or ndim?
-int8_t index_sf2[8]={-1};  //for some reason I cannot declare this above.
+/*** input: Q Value function, policy, current state, nectar state, history state*/
+/*** output: option 1-Nopt */
+int8_t chooseopt(uint16_t state_curr_sf2 , uint8_t lvs_curr_sf2 , uint8_t ns_curr_sf2 , uint16_t eps_sf2){
+
+  int8_t index_sf2[8]={-1};  //for some reason I cannot declare this above.
 
 
-//initialize
-a = 0;
+  //initialize
+  a = 0;
 
-if(eps==0){ //random
-  act_sf2 = (rand() % nact) + 1;
-}
-else{ //ep_greedy or full greedy depending on eps value
-  if(eps_sf2<(rand() % 100)){act_sf2 = (rand() % nact) +1;}
+  //ep_greedy
+  if(eps_sf2<(rand() % 100)){opt_sf2 = (rand() % nopt) +1;}  //random
   else{
-      //for each action fill in goodness value or NaN
-    for(a= 1; a < nact+1; a++){
-        hbflag = hitsbounds(state_curr_sf2, a);
-      if(hbflag){
-        Vact[(a-1)] = 0.0/0.0; //if hits bounds, not an option for movement
-        }
-      else{
-        switch(a){
-        case 1 : Vact[0] = Q[state_curr_sf2+1][ns_curr_sf2]; break;     //north
-        case 2 : Vact[1] = Q[state_curr_sf2+ndim][ns_curr_sf2]; break;    //east
-        case 3 : Vact[2] = Q[state_curr_sf2-1][ns_curr_sf2]; break;     //south
-        case 4 : Vact[3] = Q[state_curr_sf2-ndim][ns_curr_sf2]; break;      //west
-        case 5 : Vact[4] = Q[state_curr_sf2+1-ndim][ns_curr_sf2]; break;    //NW
-        case 6 : Vact[5] = Q[state_curr_sf2+1+ndim][ns_curr_sf2]; break;    //NE
-        case 7 : Vact[6] = Q[state_curr_sf2-1+ndim][ns_curr_sf2]; break;    //SE
-        case 8 : Vact[7] = Q[state_curr_sf2-1-ndim][ns_curr_sf2]; break;    //SW
-        }  //switch each state
-      } //else
-    } //for each action
+    //greedy  - find max Q over options
 
-//find max value of Vact
-max = Vact[0];
-for(a=1; a <nact; a++){
-  if(isnan(max)){max = Vact[a]; /*printf("\nmax is nan, new max= %f\n",max);*/}
-  else if(Vact[a]>max){ max=Vact[a]; }
-}
-//find all the elements that have max value
-i=0;
-for(a=0; a<nact; a++){
-  if(Vact[a]==max){index_sf2[i] = a; i++; }
-}
-//there are i elements with the same max value.  Choose randomly between them
-a = rand() % i;
-act_sf2 = index_sf2[a] + 1;
+    max = Q[state_curr_sf2][lvs_curr_sf2][ns_curr_sf2][0];
+    for(a=1; a <nopt+1; a++){
+      if(Q[state_curr_sf2][lvs_curr_sf2][ns_curr_sf2][a]>max){ max=Q[state_curr_sf2][lvs_curr_sf2][ns_curr_sf2][a]; }
+    }
+    //find all the elements that have max value
+    i=0;
+    for(a=0; a<nopt; a++){
+      if(Q[state_curr_sf2][lvs_curr_sf2][ns_curr_sf2][a]==max){index_sf2[i] = a; i++; }
+    }
+    //there are i elements with the same max value.  Choose randomly between them
+    a = rand() % i;
+    opt_sf2 = index_sf2[a] + 1;
 
-}  //else if not randomly chosen, then greedy
-} // if eps=0(random), else it is ep_greedy
+  }  //else if not randomly chosen, then greedy
 
-return act_sf2;
+  return opt_sf2;
 
-}  // end chooseact subfuction
+}  // end chooseopt subfuction
+
+
+/********************* primact subfunction *************/
+/*** selects primitive action to take (using specific optionset A3d*/
+/*** input: opt (option), optT0(option timestep)*/
+/*** output: action 1-4, option termination flag */
+int8_t primact(uint8_t opt_sf3, uint8_t optT0_sf3){
+
+
+  switch(opt_sf3){
+    case 1 :               //NE
+      switch(optT0_sf3){
+        case 1 : a_sf3 = 1; break;  //N
+        case 2 : a_sf3 = 2; break;  //E
+        default: printf("warning: check for error here in primact hrl.c"); break;
+      }
+      break;
+        case 2 :               //SE
+          switch(optT0_sf3){
+            case 1 : a_sf3 = 2; break;  //E
+            case 2 : a_sf3 = 3; break;  //S
+            default: printf("warning: check for error here in primact hrl.c"); break;
+          }
+          break;
+
+            case 3 :               //SW
+              switch(optT0_sf3){
+                case 1 : a_sf3 = 3; break;  //S
+                case 2 : a_sf3 = 4; break;  //W
+                default: printf("warning: check for error here in primact hrl.c"); break;
+              }
+              break;
+
+                case 4 :               //NW
+                  switch(optT0_sf3){
+                    case 1 : a_sf3 = 4; break;  //W
+                    case 2 : a_sf3 = 1; break;  //N
+                    default: printf("warning: check for error here in primact hrl.c"); break;
+                  }
+                  break;
+
+                    case 5 :  a_sf3 = 1; break;  //Nx3
+                    case 6 :  a_sf3 = 2; break;  //Ex3
+                    case 7 :  a_sf3 = 3; break;  //Sx3
+                    case 8 :  a_sf3 = 4; break;  //Wx3
+                    default :
+                      printf("warning: check for error here in hrl.c");
+
+  } //switch option number
+
+
+  return a_sf3;
+
+}  // end primact subfuction
 

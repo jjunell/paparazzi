@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "flight_plan.dtd">
 
-<flight_plan alt="2" ground_alt="0" lat0="51.9906153" lon0="4.3767653" max_dist_from_home="150" name="Rotorcraft Delft rlact sim" security_height="1">
+<flight_plan alt="2" ground_alt="0" lat0="51.9906153" lon0="4.3767653" max_dist_from_home="150" name="Rotorcraft Delft hrl sim" security_height="1">
   <header>
 #include "autopilot.h"
   </header>
@@ -27,8 +27,8 @@
       <while cond="LessThan(NavBlockTime(), 10)"/>
       <call_once fun="NavSetGroundReferenceHere()"/>
       <!--<call_once fun="NavSetAltitudeReferenceHere()"/>-->
-	<call_once fun="setWP_wrt00(WP_fl1,2)"/>
-	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl1,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl2,2)"/>
 	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
 	<call_once fun="setWP_wrt00(WP_hive,35)"/>
     </block>
@@ -68,30 +68,25 @@
 	<call_once fun="NavSetWaypointHere(WP__p3)"/>
 	<stay wp="_p3"/>
     </block>
+    <block name="stay_hive">
+      <stay wp="hive"/>
+    </block>
     <block name="learn_2acts">
     	<!--exception cond="GetPosAlt()>5" deroute="land here"/-->
-	<call fun="rlact_run(WP_p1,WP_p2)"/>
+	<call fun="hrl_run(WP_p1,WP_p2)"/>
 	<go from="p1" wp="p2" hmode="route"/>   
-	<call fun="rlact_run(WP_p2,WP_p1)"/>
+	<call fun="hrl_run(WP_p2,WP_p1)"/>
 	<go from="p2" wp="p1" hmode="route"/>
 	<deroute block="stay_p1"/>
     </block>
     <block name="deroute2learn">
 	<deroute block="learn_2acts"/>
     </block>
-    <block name="learn_loop">
-	<!--exception cond="GetPosAlt()>5" deroute="land here"/-->
-	<call fun="rlact_run(WP_p1,WP_p2)"/>
-	<go from="p1" wp="p2" hmode="route"/>   
-	<call fun="rlact_run(WP_p2,WP_p1)"/>
-	<go from="p2" wp="p1" hmode="route"/>
-	<deroute block="learn_loop"/>
-    </block>
     <block name="learn_loop_hrl">
 	<!--exception cond="GetPosAlt()>5" deroute="land here"/-->
 	<call fun="hrl_run(WP_p1,WP_p2)"/>
 	<go from="p1" wp="p2" hmode="route"/>   
-	<call fun="rlact_run(WP_p2,WP_p1)"/>
+	<call fun="hrl_run(WP_p2,WP_p1)"/>
 	<go from="p2" wp="p1" hmode="route"/>
 	<deroute block="learn_loop_hrl"/>
     </block>
