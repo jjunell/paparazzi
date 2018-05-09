@@ -1,5 +1,17 @@
 Q-learning HRL with options
 
 Start from simpler functions:
-1) 
+hrl.c_sim   -  good for sim and optitrack without vision.
+    * note: current version doesn't write the full Qfnc and kq variables, working on it.
+    
+    * for sim use with nps target - airframe file: sim_hrl_b, and flight plan: rotorcraft_hrl_sim
+    * for optitrack use ap target - airframe file: sim_hrl_b, and flight plan: rotorcraft_hrl_optitrack
+    
+ 
+
+hrl.c_vis1  - with optitrack and with vision module version 1: detects only red flowers and then determines which flower it's at by the state
+hrl.c_vis2  - with optitrack and with vision module version 2: detects different colors and identifies which flower/hive it's at based on color
+
+hrl.c_test1 (tentative)-
+hrl.c_test2 (tentative)-
 

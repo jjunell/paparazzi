@@ -1,12 +1,18 @@
 <!DOCTYPE airframe SYSTEM "../airframe.dtd">
 
-<airframe name="ardrone2_raw_sim_hrl">
+<airframe name="ardrone2_raw_optitrack_hrl">
 
 	<firmware name="rotorcraft">
 		<target name="ap" board="ardrone2">
-			<define name="AUTOPILOT_DISABLE_AHRS_KILL" />
 			<configure name="USE_BARO_BOARD" value="FALSE" />
+			<define name="AUTOPILOT_DISABLE_AHRS_KILL" />
+			<configure name="PREFIX"
+				value="/opt/arm-2012.03/bin/arm-none-linux-gnueabi" />
 			<define name="RLACT_NPS" value="0" />
+			<module name="gps" type="optitrack" />
+    			<!-- Use GPS heading instead of magneto -->
+    			<define name="AHRS_USE_GPS_HEADING" value="1"/>
+    			<define name="AHRS_HEADING_UPDATE_GPS_MIN_SPEED" value="0"/>
 		</target>
 
 		<target name="nps" board="pc">
@@ -24,23 +30,13 @@
 		<module name="motor_mixing" />
 		<module name="actuators" type="ardrone2" />
 		<module name="imu" type="ardrone2" />
-		<!-- gps: "ublox" or change to "sirf" for usage with parrot flight recorder -->
-		<module name="gps" type="ublox" />
-		<module name="stabilization" type="int_quat" />
+		<module name="stabilization" type="indi_simple" />
 		<module name="ahrs" type="int_cmpl_quat" />
-		<configure name="USE_MAGNETOMETER" value="FALSE" />
-		<define name="AHRS_USE_GPS_HEADING" value="TRUE" />
 		<module name="ins" type="extended" />
 	</firmware>
 
 	<modules main_freq="512">
 		<module name="bat_voltage_ardrone2" />
-		<!-- remove the gps_ubx_ucenter module if you use the sirf gps (flight 
-			recorder) -->
-		<module name="gps" type="ubx_ucenter" />
-		<module name="send_imu_mag_current" />
-		<module name="air_data" />
-		<module name="geo_mag" />
 		<module name="hrl" />
 		<!--module name="logger_file"/ -->
 		<!--module name="video_thread"-->
@@ -70,7 +66,6 @@
 		<define name="TRIM_ROLL" value="0" />
 		<define name="TRIM_PITCH" value="0" />
 		<define name="TRIM_YAW" value="0" />
-
 		<!-- Time cross layout (X), with order NW (CW), NE (CCW), SE (CW), SW (CCW) -->
 		<define name="TYPE" value="QUAD_X" />
 	</section>
@@ -111,46 +106,50 @@
 	<!-- http://wiki.paparazziuav.org/wiki/Subsystem/ahrs#Local_Magnetic_Field -->
 	<section name="AHRS" prefix="AHRS_">
 		<!-- Delft -->
-		<!--define name="H_X" value="0.3892503"/>
-		<define name="H_Y" value="0.0017972"/> 
-		<define name="H_Z" value="0.9211303"/ -->
+		<define name="H_X" value="0.3892503"/>
+		<define name="H_Y" value="0.0017972"/>
+		<define name="H_Z" value="0.9211303"/>
 	</section>
 
 	<section name="INS" prefix="INS_">
-		<define name="SONAR_MAX_RANGE" value="2.2" />
-		<define name="SONAR_UPDATE_ON_AGL" value="TRUE" />
+    		<define name="USE_GPS_ALT" value="1"/>
+    		<define name="VFF_R_GPS" value="0.01"/>
 	</section>
 
-	<section name="STABILIZATION_RATE" prefix="STABILIZATION_RATE_">
-		<!-- setpoints -->
-		<define name="SP_MAX_P" value="10000" />
-		<define name="SP_MAX_Q" value="10000" />
-		<define name="SP_MAX_R" value="10000" />
-		<define name="DEADBAND_P" value="20" />
-		<define name="DEADBAND_Q" value="20" />
-		<define name="DEADBAND_R" value="200" />
-		<define name="REF_TAU" value="4" />
 
-		<!-- feedback -->
-		<define name="GAIN_P" value="400" />
-		<define name="GAIN_Q" value="400" />
-		<define name="GAIN_R" value="350" />
+  <section name="STABILIZATION_ATTITUDE_INDI" prefix="STABILIZATION_INDI_">
+		<!-- control effectiveness -->
+		<define name="G1_P" value="0.028551973" />
+		<define name="G1_Q" value="0.023775417" />
+		<define name="G1_R" value="0.00173069" />
+		<define name="G2_R" value="0.086460732" />
 
-		<define name="IGAIN_P" value="75" />
-		<define name="IGAIN_Q" value="75" />
-		<define name="IGAIN_R" value="50" />
+		<!-- reference acceleration for attitude control -->
+		<define name="REF_ERR_P" value="380.0" />
+		<define name="REF_ERR_Q" value="380.0" />
+		<define name="REF_ERR_R" value="70.0" />
+		<define name="REF_RATE_P" value="21.6" />
+		<define name="REF_RATE_Q" value="21.6" />
+		<define name="REF_RATE_R" value="11.0" />
 
-		<!-- feedforward -->
-		<define name="DDGAIN_P" value="300" />
-		<define name="DDGAIN_Q" value="300" />
-		<define name="DDGAIN_R" value="300" />
+		<!-- second order filter parameters -->
+		<define name="FILT_CUTOFF" value="3.2" />
+		<define name="FILT_CUTOFF_R" value="3.2" />
+
+		<!-- first order actuator dynamics -->
+		<define name="ACT_DYN_P" value="0.06" />
+		<define name="ACT_DYN_Q" value="0.06" />
+		<define name="ACT_DYN_R" value="0.06" />
+
+		<!-- Adaptive Learning Rate -->
+		<define name="USE_ADAPTIVE" value="FALSE" />
+		<define name="ADAPTIVE_MU" value="0.0001" />
 	</section>
-
 	<section name="STABILIZATION_ATTITUDE" prefix="STABILIZATION_ATTITUDE_">
 		<!-- setpoints -->
 		<define name="SP_MAX_PHI" value="45" unit="deg" />
 		<define name="SP_MAX_THETA" value="45" unit="deg" />
-		<define name="SP_MAX_R" value="600" unit="deg/s" />
+		<define name="SP_MAX_R" value="180" unit="deg/s" />
 		<define name="DEADBAND_A" value="0" />
 		<define name="DEADBAND_E" value="0" />
 		<define name="DEADBAND_R" value="250" />
@@ -166,36 +165,13 @@
 		<define name="REF_MAX_Q" value="600." unit="deg/s" />
 		<define name="REF_MAX_QDOT" value="RadOfDeg(8000.)" />
 
-		<define name="REF_OMEGA_R" value="300" unit="deg/s" />
+		<define name="REF_OMEGA_R" value="450" unit="deg/s" />
 		<define name="REF_ZETA_R" value="0.9" />
-		<define name="REF_MAX_R" value="400." unit="deg/s" />
-		<define name="REF_MAX_RDOT" value="RadOfDeg(4000.)" />
-
-		<!-- feedback -->
-		<define name="PHI_PGAIN" value="592" />
-		<define name="PHI_DGAIN" value="303" />
-		<define name="PHI_IGAIN" value="0" />
-
-		<define name="THETA_PGAIN" value="606" />
-		<define name="THETA_DGAIN" value="303" />
-		<define name="THETA_IGAIN" value="0" />
-
-		<define name="PSI_PGAIN" value="529" />
-		<define name="PSI_DGAIN" value="353" />
-		<define name="PSI_IGAIN" value="0" />
-
-		<!-- feedforward -->
-		<define name="PHI_DDGAIN" value="0" />
-		<define name="THETA_DDGAIN" value="0" />
-		<define name="PSI_DDGAIN" value="52" />
+		<define name="REF_MAX_R" value="600." unit="deg/s" />
+		<define name="REF_MAX_RDOT" value="RadOfDeg(8000.)" />
 	</section>
 
 	<section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-		<define name="MIN_ERR_Z" value="POS_BFP_OF_REAL(-10.)" />
-		<define name="MAX_ERR_Z" value="POS_BFP_OF_REAL( 10.)" />
-		<define name="MIN_ERR_ZD" value="SPEED_BFP_OF_REAL(-10.)" />
-		<define name="MAX_ERR_ZD" value="SPEED_BFP_OF_REAL( 10.)" />
-		<define name="MAX_SUM_ERR" value="2000000" />
 		<define name="HOVER_KP" value="283" />
 		<define name="HOVER_KD" value="82" />
 		<define name="HOVER_KI" value="13" />
@@ -208,15 +184,19 @@
 		<define name="MAX_BANK" value="20" unit="deg" />
 		<!-- Bad weather -->
 		<!-- define name="MAX_BANK" value="32" unit="deg"/ -->
-		<define name="PGAIN" value="79" />
-		<define name="DGAIN" value="100" />
+
+		<define name="PGAIN" value="363" />
+		<define name="DGAIN" value="237" />
 		<define name="IGAIN" value="30" />
-		<define name="REF_MAX_SPEED" value="0.3" />
+		<define name="VGAIN" value="0" />
+		<define name="AGAIN" value="0" />
+		<define name="REF_MAX_SPEED" value="0.4" />
 	</section>
 
 	<section name="SIMULATOR" prefix="NPS_">
-		<define name="ACTUATOR_NAMES" value="nw_motor, ne_motor, se_motor, sw_motor" type="string[]" />
+		<define name="ACTUATOR_NAMES" value="nw_motor, ne_motor, se_motor, sw_motor" type="string[]"/>
 		<define name="JSBSIM_MODEL" value="simple_ardrone2" type="string" />
+		<!--define name="JSBSIM_INIT" value="reset00" type="string" /-->
 		<define name="SENSORS_PARAMS" value="nps_sensors_params_ardrone2.h" type="string" />
 	</section>
 
@@ -226,6 +206,7 @@
 		<define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD" />
 		<define name="MODE_AUTO2" value="AP_MODE_NAV" />
 		<define name="ARRIVED_AT_WAYPOINT" value="0.1" />
+		<!-- <define name="NO_RC_THRUST_LIMIT" value="TRUE"/> -->
 	</section>
 
 	<section name="BAT">

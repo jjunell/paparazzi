@@ -201,12 +201,10 @@
 	</section>
 
 	<section name="SIMULATOR" prefix="NPS_">
-		<define name="ACTUATOR_NAMES" value="nw_motor, ne_motor, se_motor, sw_motor"
-			type="string[]" />
+		<define name="ACTUATOR_NAMES" value="nw_motor, ne_motor, se_motor, sw_motor" type="string[]"/>
 		<define name="JSBSIM_MODEL" value="simple_ardrone2" type="string" />
 		<define name="JSBSIM_INIT" value="reset00" type="string" />
-		<define name="SENSORS_PARAMS" value="nps_sensors_params_ardrone2.h"
-			type="string" />
+		<define name="SENSORS_PARAMS" value="nps_sensors_params_ardrone2.h" type="string" />
 	</section>
 
 	<section name="AUTOPILOT">
@@ -214,7 +212,7 @@
 		<define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT" />
 		<define name="MODE_AUTO1" value="AP_MODE_HOVER_Z_HOLD" />
 		<define name="MODE_AUTO2" value="AP_MODE_NAV" />
-		<define name="ARRIVED_AT_WAYPOINT" value="0.15" />
+		<define name="ARRIVED_AT_WAYPOINT" value="0.1" />
 		<define name="AUTOPILOT_IN_FLIGHT_MIN_THRUST" value="1500" />
 		<!-- <define name="NO_RC_THRUST_LIMIT" value="TRUE"/> -->
 	</section>
