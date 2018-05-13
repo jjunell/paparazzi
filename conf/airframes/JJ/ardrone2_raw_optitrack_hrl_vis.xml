@@ -1,6 +1,6 @@
 <!DOCTYPE airframe SYSTEM "../airframe.dtd">
 
-<airframe name="ardrone2_raw_optitrack_hrl">
+<airframe name="ardrone2_raw_optitrack_hrl_vis">
 
 	<firmware name="rotorcraft">
 		<target name="ap" board="ardrone2">

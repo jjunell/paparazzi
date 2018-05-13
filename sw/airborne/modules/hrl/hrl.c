@@ -21,7 +21,8 @@
  */
 
 /* This module creates a flight plan callable function to learn high level guidance via hierarchical reinforcement learning.  written by Jaime Junell */
-/* version for vision */
+/* version for cyberzoo with vision (version 1) */
+/* can also be compiled with sim airframe and nps target */
 
 #include "hrl.h"
 #include "generated/airframe.h"
@@ -37,7 +38,7 @@
 /** Set the default File logger path to the USB drive for ardrone, other for */
 #if RLACT_NPS
 #define RLACT_FILEPATH "./sw/airborne/modules/hrl/"   // for simulation (nps)
-const int8_t detected_reward;
+int8_t detected_reward;
 #else
 #define RLACT_FILEPATH "/data/video/usb/"     // for ardrone (ap)
 #include "modules/detect_reward/detect_reward.h"
@@ -125,7 +126,7 @@ void hrl_init(void) {
   lvs_curr = 0;     //last visited hive
   lvs_next = 0;
 
-  vs = 0;
+  vs = 0;  //seeing no POI
 
   state_opt0 = 0;
   ns_opt0 = 0;
@@ -151,7 +152,6 @@ void hrl_init(void) {
   printf("init2: initialized variables \n");
 
   srand(time(NULL)); //initialize random number generator just once
-
 
   printf("init3: \n");
 
@@ -214,8 +214,8 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
 
     // flag if action results in hiting the boundary
     hbflag = hitsbounds(state_curr, act);
-    
-if(hbflag){
+
+    if(hbflag){
       printf("\n hitbound with act = %d; therefore stay still\n",act);
       act = 0;  // special action for not moving; (not really a chosen action, but needed for implemention in paparazzi.)
       optflag = 1;
@@ -290,6 +290,7 @@ if(hbflag){
     // FOR flight test - use camera to detect flower
     if (!RLACT_NPS) {
       vs = detected_reward;
+//vision version 1:  vs, 0= nothing seen, 1= flower seen, 2= hive seen
     }
 
     switch (state_next) {
@@ -301,10 +302,10 @@ if(hbflag){
           printf("/in simulated flower state/ ");
         }  //for sim- define vision state based on location state
         if (vs == 0) {  //false negative
-          ++falseneg[state_curr];
+          ++falseneg[state_next];
           printf(
               "false negative: reward detection missed at flower in state: %d",
-              state_curr);
+              state_next);
         }
         else {
           printf("/reward state succesfully detected/");
@@ -417,7 +418,7 @@ if(hbflag){
       ++kq[state_opt0][lvs_opt0][ns_opt0][opt-1];
       alpha =  0.3 ; //1.0/(double pow((double)k[state_opt0][lvs_opt0][ns_opt0][opt-1], double .25));
       Q[state_opt0][lvs_opt0][ns_opt0][opt-1] = Q_old + alpha*(reward + belgam* Q[state_next][lvs_next][ns_next][opt-1] - Q_old);
-      printf("end option %d from state [ %d, %d, %d ], reward = %.4f\n", opt, state_opt0, lvs_opt0, ns_opt0, optr);
+      printf("end option %d from state. [ %d, %d, %d ], reward = %.4f\n", opt, state_opt0, lvs_opt0, ns_opt0, optr);
       printf(" Qold = %.4f,  Qnew= %.4f\n", Q_old, Q[state_opt0][lvs_opt0][ns_opt0][opt-1]);
     }
     ////////// update value function file ////////
@@ -459,17 +460,17 @@ if(hbflag){
       else {
         printf("Writing to files......\n");
         k = 1 ; n = 1 ;  //nectarstate 1, opt1
-        //for (n = 0; i < nopt; n++) {
-        //for (k = 0; j < Nns+1; k++) {
-        for (i = 0; i < nlvs; i++) {
-          for (j = 0; j < nstates; j++) {
-            fprintf(file_Qfcn, "%.10f ", Q[j][i][k][n]);
-            fprintf(file_kq, "%d ", kq[j][i][k][n]);
+        for (n = 0; n < nopt; n++) {
+          for (k = 0; k < Nns+1; k++) {
+            for (i = 0; i < nlvs; i++) {
+              for (j = 0; j < nstates; j++) {
+                fprintf(file_Qfcn, "%.4f ", Q[j][i][k][n]);
+                fprintf(file_kq, "%d ", kq[j][i][k][n]);
 
+              }
+            }
           }
-        }
-        //}
-        //}  // end loops to print falsepos, Qfcn and kv in file
+        }  // end loops to print falsepos, Qfcn and kv in file
 
 
       }  //end security check
@@ -609,36 +610,38 @@ int8_t primact(uint8_t opt_sf3, uint8_t optT0_sf3){
         default: printf("warning: check for error here in primact hrl.c"); break;
       }
       break;
-        case 2 :               //SE
-          switch(optT0_sf3){
-            case 1 : a_sf3 = 2; break;  //E
-            case 2 : a_sf3 = 3; break;  //S
-            default: printf("warning: check for error here in primact hrl.c"); break;
+
+    case 2 :               //SE
+      switch(optT0_sf3){
+        case 1 : a_sf3 = 2; break;  //E
+        case 2 : a_sf3 = 3; break;  //S
+        default: printf("warning: check for error here in primact hrl.c"); break;
           }
-          break;
+      break;
 
-            case 3 :               //SW
-              switch(optT0_sf3){
-                case 1 : a_sf3 = 3; break;  //S
-                case 2 : a_sf3 = 4; break;  //W
-                default: printf("warning: check for error here in primact hrl.c"); break;
-              }
-              break;
+    case 3 :               //SW
+      switch(optT0_sf3){
+        case 1 : a_sf3 = 3; break;  //S
+        case 2 : a_sf3 = 4; break;  //W
+        default: printf("warning: check for error here in primact hrl.c"); break;
+      }
+      break;
 
-                case 4 :               //NW
-                  switch(optT0_sf3){
-                    case 1 : a_sf3 = 4; break;  //W
-                    case 2 : a_sf3 = 1; break;  //N
-                    default: printf("warning: check for error here in primact hrl.c"); break;
-                  }
-                  break;
+    case 4 :               //NW
+      switch(optT0_sf3){
+        case 1 : a_sf3 = 4; break;  //W
+        case 2 : a_sf3 = 1; break;  //N
+        default: printf("warning: check for error here in primact hrl.c"); break;
+      }
+      break;
 
-                    case 5 :  a_sf3 = 1; break;  //Nx3
-                    case 6 :  a_sf3 = 2; break;  //Ex3
-                    case 7 :  a_sf3 = 3; break;  //Sx3
-                    case 8 :  a_sf3 = 4; break;  //Wx3
-                    default :
-                      printf("warning: check for error here in hrl.c");
+    case 5 :  a_sf3 = 1; break;  //Nx3
+    case 6 :  a_sf3 = 2; break;  //Ex3
+    case 7 :  a_sf3 = 3; break;  //Sx3
+    case 8 :  a_sf3 = 4; break;  //Wx3
+    default :
+      printf("warning: check for error here in hrl.c");
+      break;
 
   } //switch option number
 

@@ -1,6 +1,6 @@
 <!DOCTYPE airframe SYSTEM "../airframe.dtd">
 
-<airframe name="ardrone2_raw_sim_hrl_b">
+<airframe name="ardrone2_raw_optitrack_hrl">
 
 	<firmware name="rotorcraft">
 		<target name="ap" board="ardrone2">
@@ -18,9 +18,6 @@
 		<target name="nps" board="pc">
 			<module name="fdm" type="jsbsim" />
 			<define name="RLACT_NPS" value="1" />
-			<define name="AHRS_USE_GPS_HEADING" value="TRUE" />
-		<!-- gps: "ublox" or change to "sirf" for usage with parrot flight recorder -->
-			<module name="gps" type="ublox" />
 		</target>
 
 		<define name="FAILSAFE_DESCENT_SPEED" value="0.5" />
@@ -41,7 +38,21 @@
 	<modules main_freq="512">
 		<module name="bat_voltage_ardrone2" />
 		<module name="hrl" />
+		<module name="video_thread" />
+		<module name="detect_reward_4c.xml">
+			<define name="DETECTREWARD_CAMERA" value="bottom_camera" />
+		</module>
 
+		<!-- module name="cv_colorfilter">
+			<define name="COLORFILTER_CAMERA" value="bottom_camera" />
+		</module -->
+
+		<module name="video_rtp_stream">
+			<define name="VIEWVIDEO_CAMERA" value="bottom_camera" />
+			<define name="VIEWVIDEO_DOWNSIZE_FACTOR" value="4" />
+			<define name="VIEWVIDEO_QUALITY_FACTOR" value="60" />
+			<define name="VIEWVIDEO_FPS" value="1" />
+		</module>
 	</modules>
 
 	<commands>
@@ -186,7 +197,7 @@
 		<define name="IGAIN" value="30" />
 		<define name="VGAIN" value="0" />
 		<define name="AGAIN" value="0" />
-		<define name="REF_MAX_SPEED" value="0.3" />
+		<define name="REF_MAX_SPEED" value="0.4" />
 	</section>
 
 	<section name="SIMULATOR" prefix="NPS_">

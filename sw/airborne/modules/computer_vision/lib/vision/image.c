@@ -163,12 +163,12 @@ uint16_t image_yuv422_colorfilt(struct image_t *input, struct image_t *output, u
     for (uint16_t x = 0; x < output->w; x += 2) {
       // Check if the color is inside the specified values
       if (
-        (dest[1] >= y_m)
-        && (dest[1] <= y_M)
-        && (dest[0] >= u_m)
-        && (dest[0] <= u_M)
-        && (dest[2] >= v_m)
-        && (dest[2] <= v_M)
+        (source[1] >= y_m)
+        && (source[1] <= y_M)
+        && (source[0] >= u_m)
+        && (source[0] <= u_M)
+        && (source[2] >= v_m)
+        && (source[2] <= v_M)
       ) {
         cnt ++;
         // UYVY

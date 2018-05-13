@@ -44,8 +44,8 @@
       <call_once fun="NavSetWaypointHere(WP_STDBY)"/>
       <call_once fun="NavSetWaypointHere(WP_TD)"/>
       <call_once fun="NavSetAltitudeReferenceHere()"/>
-	<call_once fun="setWP_wrt00(WP_fl1,2)"/>
-	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl1,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl2,2)"/>
 	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
 	<call_once fun="setWP_wrt00(WP_hive,35)"/>
     </block>
@@ -82,8 +82,8 @@
    <block name="set_flowers">   <!-- sets flowers wrt wp_00-->
     	<exception cond="!GpsFixValid()" deroute="land here"/>
     	<exception cond="GetPosAlt()>5" deroute="land here"/>
-	<call_once fun="setWP_wrt00(WP_fl1,2)"/>
-	<call_once fun="setWP_wrt00(WP_fl2,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl1,22)"/>
+	<call_once fun="setWP_wrt00(WP_fl2,2)"/>
 	<call_once fun="setWP_wrt00(WP_fl3,30)"/>
 	<call_once fun="setWP_wrt00(WP_hive,35)"/>
 	<call_once fun="NavSetWaypointHere(WP__p3)"/>

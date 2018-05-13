@@ -21,7 +21,7 @@
  */
 
 /* This module creates a flight plan callable function to learn high level guidance via hierarchical reinforcement learning.  written by Jaime Junell */
-/* version for simulation and cyberzoo without vision */
+/* version for cyberzoo with vision (version 2) */
 
 #include "hrl.h"
 #include "generated/airframe.h"
@@ -57,10 +57,15 @@ const int8_t nlvs = 4;  //number lvs (states)
 const int8_t ndim = 6; //number of elements in a dimension = 6 (nrows,ncols)
 const int8_t nstates=36; //=ndim*ndim
 
+//vision version 1:  vs, 0= nothing seen, 1= flower seen, 2= hive seen
+//vision version 2:  vs, 0= nothing seen, 1= F1 seen, 2= F2 seen, 3= F3 seen, 4= hive seen
+int8_t vs;
+
 // flags
 int8_t nsflag;  //nectar state flag = nectar full
 int8_t hbflag;      //hitbounds flag
 int8_t optflag;   //option terminal flag
+int8_t falseposflag;  // false positive reward detection
 
 // Bellman equation
 double Q_old, alpha;
@@ -79,6 +84,9 @@ int16_t i, j, k, n;
 char filename_Qfcn[5000];
 char filename_kq[5000];
 
+// counting false positive and false negative reward detection
+static int falsepos[36] = { 0 };
+static int falseneg[36] = { 0 };
 
 // for execution of RL in paparazzi
 struct EnuCoor_f my_wp;
@@ -117,6 +125,8 @@ void hrl_init(void) {
   lvs_curr = 0;     //last visited hive
   lvs_next = 0;
 
+  vs = 0;  //seeing no POI
+
   state_opt0 = 0;
   ns_opt0 = 0;
   lvs_opt0 = 0;
@@ -126,6 +136,7 @@ void hrl_init(void) {
 
   optflag = 1;  // option termination flag
   optT0 = 1;
+  falseposflag = 0;
 
   reward = 0.0;
 
@@ -140,7 +151,6 @@ void hrl_init(void) {
   printf("init2: initialized variables \n");
 
   srand(time(NULL)); //initialize random number generator just once
-
 
   printf("init3: \n");
 
@@ -276,8 +286,90 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
     }  // calculate next location state
 
 
-    // Env: calculate (t+1) reward and next xlv and xns states
-    if(ns_curr<Nns && state_next==22 && fnr_count[1]>tfnr){
+    // FOR flight test - use camera to detect flower
+    if (!RLACT_NPS) {
+      vs = detected_reward;
+      //vision version 2:  vs= 0= nothing seen, 1= F1 seen, 2= F2 seen, 3= F3 seen, 4= hive seen
+    }
+
+    switch (state_next) {
+      case 22:  // flower 1
+        if (RLACT_NPS) {
+          vs = 1;
+          printf("/in F1 simulated flower state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf("false negative: reward detection missed at flower 1");
+        }
+        else {
+          printf("/reward state succesfully detected/");
+        }
+
+        break;
+      case 2:  // flower 2
+        if (RLACT_NPS) {
+          vs = 2;
+          printf("/in F2 simulated flower state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf("false negative: reward detection missed at flower 2");
+        }
+        else {
+          printf("/reward state succesfully detected/");
+        }
+
+        break;
+
+
+      case 30:  // flower 3
+        if (RLACT_NPS) {
+          vs = 3;
+          printf("/in F3 simulated flower state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf(
+              "false negative: reward detection missed at flower3");
+        }
+        else {
+          printf("/reward state succesfully detected/");
+        }
+
+        break;
+      case 35:      // if in hive state
+        if (RLACT_NPS) {
+          vs = 4;
+          printf("/in simulated hive state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf("false negative: reward detection missed at hive");
+        }
+        else {
+          printf("/reward state succesfully detected/");
+        }
+
+        break; 
+
+
+      default:         // not a reward space (code done for random policy)
+        if (RLACT_NPS) {
+          vs = 0;
+        }  // for sim
+        if (vs != 0) {  //false positive
+          falseposflag = 1;
+          ++falsepos[state_curr];
+          printf("false positive: unwarranted detection of vs = %d while at hive",vs);
+        }
+    }  // switch statement - vision state
+
+
+
+    // Env: calculate (t+1) reward and next xlv and xns states  BASED ON VISION 
+
+    if(ns_curr<Nns && vs==1 && fnr_count[1]>tfnr){
       //at flower 1 and there is nectar
       reward = -1;
       ns_next = ns_curr + 1;
@@ -287,7 +379,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
       optflag = 1;
       printf("F1 next state \n");
     }
-    else if(ns_curr<Nns && state_next==2 && fnr_count[2]>tfnr){
+    else if(ns_curr<Nns && vs==2 && fnr_count[2]>tfnr){
       //at flower 2 and there is nectar
       reward = -1;
       ns_next = ns_curr + 1;
@@ -297,7 +389,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
       optflag = 1;
       printf("F2 next state \n");
     }
-    else if(ns_curr<Nns && state_next==30 && fnr_count[3]>tfnr){
+    else if(ns_curr<Nns && vs==3 && fnr_count[3]>tfnr){
       //at flower 3 and there is nectar
       reward = -1;
       ns_next = ns_curr + 1;
@@ -307,7 +399,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
       optflag = 1;
       printf("F3 next state \n");
     }
-    else if((state_next==35) && (ns_curr>0)){
+    else if(ns_curr>0 && vs==4){
       //at hive and there is nectar to collect reward
       reward = rhive[ns_curr];  //hive reward function base 0
       ns_next = 0;
@@ -315,12 +407,16 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
       optflag = 1;
       printf("hive next state \n");
     }
-    else{
-      // If we haven't hit a reward spot, then
+    else {  // POI not detected or no nectar available
       reward = -1;
       ns_next = ns_curr;
       lvs_next = lvs_curr;
-    }
+    }  // reward and ns / lvs updates
+
+    if (falseposflag == 1) {
+      ns_next = ns_curr;
+    }  //if reward is false positive, don't go to next nectar state
+
 
     if(hbflag){
       // if wall hit then reward overwritten
@@ -409,6 +505,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
 
 
 
+    falseposflag = 0;
 
     // reset "next state" to "current state" for next iteration
     state_curr = state_next;
