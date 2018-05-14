@@ -21,8 +21,7 @@
  */
 
 /* This module creates a flight plan callable function to learn high level guidance via hierarchical reinforcement learning.  written by Jaime Junell */
-/* version for cyberzoo with vision (version 1) */
-/* can also be compiled with sim airframe and nps target */
+/* version for cyberzoo with vision (version 2) */
 
 #include "hrl.h"
 #include "generated/airframe.h"
@@ -160,7 +159,7 @@ void hrl_init(void) {
 ///////*  OWN FUCTION TO CALL FROM FLIGHT PLAN *//////
 bool hrl_run(uint8_t wpa, uint8_t wpb){
   pass++;
-  printf("pass %d:  ",pass);
+  printf("\n pass %d:  ",pass);
 
   /* first pass?  init state is hive, and move wpb wrt p00 */
   if(pass==1){
@@ -175,8 +174,8 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
   }
   else{
 
-    printf("state = %d, lvs= %d,  ns= %d\n", state_curr, lvs_curr, ns_curr);
-    printf("nr counter = [ %d, %d,  %d,  %d]\n", fnr_count[0], fnr_count[1], fnr_count[2], fnr_count[3]);
+    printf("state: %d, lvs: %d,  ns: %d\n", state_curr, lvs_curr, ns_curr);
+    //printf("nr counter = [ %d, %d,  %d,  %d]\n", fnr_count[0], fnr_count[1], fnr_count[2], fnr_count[3]);
 
     //choose option if optflag
     if(optflag){
@@ -185,7 +184,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
       optflag = 0;
       idec++;
 
-      printf("option = %d\n",opt);
+      printf("option %d :  ",opt);
 
       //remember initial state of option
       state_opt0 = state_curr;
@@ -197,7 +196,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
 
     //choose primitive action based on option (hardcoded in subfunction for optionset A3d)
     act = primact(opt, optT0);
-    printf("act = %d\n",act);
+    printf("act %d\n",act);
 
     // flag if option is terminated (hardcoded for optionset A3d)
     switch(opt){
@@ -208,7 +207,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
         if(optT0==3){optflag = 1;}
         break;
       default :
-        printf("warning: no valid option selected. Check for error here in hrl.c\n"); break;
+        printf("\n\n check code!: no valid option selected. Check for error here in hrl.c\n\n"); break;
     }
 
 
@@ -216,7 +215,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
     hbflag = hitsbounds(state_curr, act);
 
     if(hbflag){
-      printf("\n hitbound with act = %d; therefore stay still\n",act);
+      printf("hit!\n");
       act = 0;  // special action for not moving; (not really a chosen action, but needed for implemention in paparazzi.)
       optflag = 1;
     }
@@ -264,7 +263,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
         my_wp.x = waypoint_get_x(wpa);
         my_wp.y = waypoint_get_y(wpa);
         waypoint_set_enu(wpb, &my_wp);
-        printf("warning: no valid action selected\n");
+        printf("\n\n check code!: no valid action selected\n\n");
         break;
     }
 
@@ -282,7 +281,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
         case 3: state_next = state_curr -1; break;     //south
         case 4: state_next = state_curr - ndim; break; //west
         default :
-          printf("warning: no valid primitive action selected. Check for error here in hrl.c\n"); break;
+          printf("\n\n check code!: no valid primitive action selected. Check for error here in hrl.c\n\n"); break;
       }  //switch act
     }  // calculate next location state
 
@@ -290,112 +289,138 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
     // FOR flight test - use camera to detect flower
     if (!RLACT_NPS) {
       vs = detected_reward;
-//vision version 1:  vs, 0= nothing seen, 1= flower seen, 2= hive seen
+      //vision version 2:  vs= 0= nothing seen, 1= F1 seen, 2= F2 seen, 3= F3 seen, 4= hive seen
     }
 
     switch (state_next) {
-      case 2:
-      case 22:
-      case 30:  // flowers
+      case 22:  // flower 1
         if (RLACT_NPS) {
           vs = 1;
-          printf("/in simulated flower state/ ");
+          printf("/in F1 simulated flower state/ ");
         }  //for sim- define vision state based on location state
         if (vs == 0) {  //false negative
           ++falseneg[state_next];
-          printf(
-              "false negative: reward detection missed at flower in state: %d",
-              state_next);
+          printf("false negative at flower 1\n");
         }
         else {
-          printf("/reward state succesfully detected/");
+          //printf("/reward state succesfully detected/");
+        }
+
+        break;
+      case 2:  // flower 2
+        if (RLACT_NPS) {
+          vs = 2;
+          printf("/in F2 simulated flower state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf("false negative at flower 2");
+        }
+        else {
+          //printf("/reward state succesfully detected/");
+        }
+
+        break;
+
+
+      case 30:  // flower 3
+        if (RLACT_NPS) {
+          vs = 3;
+          printf("/in F3 simulated flower state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf("false negative at flower3\n");
+        }
+        else {
+          //printf("/reward state succesfully detected/");
         }
 
         break;
       case 35:      // if in hive state
-        vs = 2;
-        break;  // assume perfect detection of hive
+        if (RLACT_NPS) {
+          vs = 4;
+          printf("/in simulated hive state/ ");
+        }  //for sim- define vision state based on location state
+        if (vs == 0) {  //false negative
+          ++falseneg[state_next];
+          printf("false negative at hive\n");
+        }
+        else {
+          //printf("/reward state succesfully detected/");
+        }
+
+        break; 
+
+
       default:         // not a reward space (code done for random policy)
         if (RLACT_NPS) {
           vs = 0;
         }  // for sim
-        if (vs == 1) {  //false positive
+        if (vs != 0) {  //false positive
           falseposflag = 1;
-          ++falsepos[state_curr];
-          printf("false positive: unwarranted reward given in state: %d",
-              state_curr);
+          ++falsepos[state_next];
+          printf("false positive: vs = %d at state %d\n",vs,state_next);
         }
     }  // switch statement - vision state
 
 
 
     // Env: calculate (t+1) reward and next xlv and xns states  BASED ON VISION 
-    switch (vs) {
-      case 1:  // flowers
-        if(ns_curr<Nns && state_next==22 && fnr_count[1]>tfnr){
-          //at flower 1 and there is nectar
-          reward = -1;
-          ns_next = ns_curr + 1;
-          lvs_next = 1;
 
-          fnr_count[1] = 0;
-          optflag = 1;
-          printf("F1 next state \n");
-        }
-        else if(ns_curr<Nns && state_next==2 && fnr_count[2]>tfnr){
-          //at flower 2 and there is nectar
-          reward = -1;
-          ns_next = ns_curr + 1;
-          lvs_next = 2;
+    if(ns_curr<Nns && vs==1 && fnr_count[1]>tfnr){
+      //at flower 1 and there is nectar
+      reward = -1;
+      ns_next = ns_curr + 1;
+      lvs_next = 1;
 
-          fnr_count[2] = 0;
-          optflag = 1;
-          printf("F2 next state \n");
-        }
-        else if(ns_curr<Nns && state_next==30 && fnr_count[3]>tfnr){
-          //at flower 3 and there is nectar
-          reward = -1;
-          ns_next = ns_curr + 1;
-          lvs_next = 3;
+      fnr_count[1] = 0;
+      optflag = 1;
+      printf("F1 next state \n");
+    }
+    else if(ns_curr<Nns && vs==2 && fnr_count[2]>tfnr){
+      //at flower 2 and there is nectar
+      reward = -1;
+      ns_next = ns_curr + 1;
+      lvs_next = 2;
 
-          fnr_count[3] = 0;
-          optflag = 1;
-          printf("F3 next state \n");
-        }
-        else {  //no nectar available even though color seen
-              reward = -1;
-              ns_next = ns_curr;
-              lvs_next = lvs_curr;
-        }
-               break;
+      fnr_count[2] = 0;
+      optflag = 1;
+      printf("F2 next state \n");
+    }
+    else if(ns_curr<Nns && vs==3 && fnr_count[3]>tfnr){
+      //at flower 3 and there is nectar
+      reward = -1;
+      ns_next = ns_curr + 1;
+      lvs_next = 3;
 
-      case 2:  //hive
-        if(ns_curr>0){
-          //at hive and there is nectar to collect reward
-          reward = rhive[ns_curr];  //hive reward function base 0
-          ns_next = 0;
-          lvs_next = 0;
-          optflag = 1;
-          printf("hive next state \n");
-        }
-        else{
-          // If no nectar to bring to hive, no reward
-          reward = -1;
-          ns_next = ns_curr;
-          lvs_next = lvs_curr;
-        }
-        break;
-
-      default:  // POI not detected
-        reward = -1;
-        ns_next = ns_curr;
-        lvs_next = lvs_curr;
-        break;
-    }  //switch vs
-
-    if (falseposflag == 1) {
+      fnr_count[3] = 0;
+      optflag = 1;
+      printf("F3 next state \n");
+    }
+    else if(ns_curr>0 && vs==4){
+      //at hive and there is nectar to collect reward
+      reward = rhive[ns_curr];  //hive reward function base 0
+      ns_next = 0;
+      lvs_next = 0;
+      optflag = 1;
+      printf("hive next state \n");
+    }
+    else {  // POI not detected or no nectar available
+      reward = -1;
       ns_next = ns_curr;
-    }  //if reward is false positive, don't go to next nectar state
+      lvs_next = lvs_curr;
+
+      if (vs>0){
+        printf("POI %d detected, but nectar not available\n",vs);
+      }
+    }  // reward and ns / lvs updates
+
+    // can I determine false positives with hard coding when it's possible that the flower has moved?
+    //only use if color location perfectly calibrated.
+    //if (falseposflag == 1) {
+      //ns_next = ns_curr;
+    //}  //if reward is false positive, don't go to next nectar state
 
 
     if(hbflag){
@@ -418,7 +443,7 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
       ++kq[state_opt0][lvs_opt0][ns_opt0][opt-1];
       alpha =  0.3 ; //1.0/(double pow((double)k[state_opt0][lvs_opt0][ns_opt0][opt-1], double .25));
       Q[state_opt0][lvs_opt0][ns_opt0][opt-1] = Q_old + alpha*(reward + belgam* Q[state_next][lvs_next][ns_next][opt-1] - Q_old);
-      printf("end option %d from state. [ %d, %d, %d ], reward = %.4f\n", opt, state_opt0, lvs_opt0, ns_opt0, optr);
+      printf("end option %d, reward = %.4f\n", opt, optr);
       printf(" Qold = %.4f,  Qnew= %.4f\n", Q_old, Q[state_opt0][lvs_opt0][ns_opt0][opt-1]);
     }
     ////////// update value function file ////////

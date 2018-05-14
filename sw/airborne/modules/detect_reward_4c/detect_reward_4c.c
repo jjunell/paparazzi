@@ -33,7 +33,7 @@
 #include <stdio.h>
 
 #ifndef DETECTREWARD_FPS
-#define DETECTREWARD_FPS 0       ///< Default FPS (zero means run at camera fps)
+#define DETECTREWARD_FPS 10       ///< Default FPS (zero means run at camera fps)
 #endif
 PRINT_CONFIG_VAR(DETECTREWARD_FPS)
 
@@ -71,42 +71,49 @@ void detect_reward_init(void)
 {
  listener = cv_add_to_device(&DETECTREWARD_CAMERA, detect_reward_process_img, DETECTREWARD_FPS);
 
- // yellow color  //84,129, 141
- color_lum_min[0] = 54;
- color_lum_max[0] = 115;
- color_cb_min[0]  = 99;
- color_cb_max[0]  = 160;
- color_cr_min[0]  = 110;
- color_cr_max[0]  = 172;
+ // yellow color
+ color_lum_min[0] = 126;
+ color_lum_max[0] = 255;
+ color_cb_min[0]  = 0;
+ color_cb_max[0]  = 120;
+ color_cr_min[0]  = 91;
+ color_cr_max[0]  = 180;
 
- // red color  // 125,120,197
+ // red color
  color_lum_min[1] = 41;
- color_lum_max[1] = 183;
+ color_lum_max[1] = 230;
  color_cb_min[1]  = 82;
  color_cb_max[1]  = 137;
  color_cr_min[1]  = 160;
  color_cr_max[1]  = 249;
 
- // blue color  //176,70,106
- color_lum_min[2] = 140;
- color_lum_max[2] = 210;
- color_cb_min[2]  = 40;
- color_cb_max[2]  = 100;
- color_cr_min[2]  = 75;
- color_cr_max[2]  = 135;
+ // blue color
+ color_lum_min[2] = 75;
+ color_lum_max[2] = 255;
+ color_cb_min[2]  = 138;
+ color_cb_max[2]  = 255;
+ color_cr_min[2]  = 0;
+ color_cr_max[2]  = 124;
 
- // purple color  //150,113,168
- color_lum_min[3] = 120;
- color_lum_max[3] = 183;
- color_cb_min[3]  = 85;
- color_cb_max[3]  = 145;
- color_cr_min[3]  = 138;
- color_cr_max[3]  = 199;
+ // purple color
+ color_lum_min[3] = 36;
+ color_lum_max[3] = 239;
+ color_cb_min[3]  = 134;
+ color_cb_max[3]  = 218;
+ color_cr_min[3]  = 152;
+ color_cr_max[3]  = 255;
 }
 
 static struct image_t *detect_reward_process_img(struct image_t *img)
 {
-  uint8_t i;
+  uint8_t i, imax=0;
+  uint32_t countmax;
+
+  // print to see uyvy color of center pixel
+   //  uint8_t *img_buf = (uint8_t*)(img->buf);
+   //  printf("uyvy %d %d %d %d\n", img_buf[img->w * 2 * img->h/2 + img->w], img_buf[img->w * 2 * img->h/2 + img->w + 1], img_buf[img->w * 2 * img->h/2 + img->w + 2], img_buf[img->w * 2 * img->h/2 + img->w + 3]);
+
+  countmax = 0;
   for (i = 0; i < nc; i++) {
     color_count = image_yuv422_color_counter(img,
         color_lum_min[i], color_lum_max[i],
@@ -114,23 +121,38 @@ static struct image_t *detect_reward_process_img(struct image_t *img)
         color_cr_min[i], color_cr_max[i]
     );
     detect_array[i] = color_count > thresholdColorCount;
+    //printf("count color %d: %d \n", i, color_count);
+
+    if (color_count>countmax){
+      imax=i;  // index of color with max count in case there are multiple POI detected
+    }
   }
 
   //
-  printf("[y,r,b,p]: [ %d %d %d %d ] \n", detect_array[0],detect_array[1],detect_array[2],detect_array[3]);
-  //printf("reward_flag: %d %d %d %d  \n", color_count, thresholdColorCount, detected_reward);
+  if ((detect_array[0] + detect_array[1] + detect_array[2] + detect_array[3])>=1){
+  printf("[y,r,b,p]: [ %d %d %d %d ] ", detect_array[0],detect_array[1],detect_array[2],detect_array[3]);
+  }
 
-
+ //if more than one POI detected, set to detect only max count color
   if ((detect_array[0] + detect_array[1] + detect_array[2] + detect_array[3])>1)
   {
     printf("more than 1 POI detected\n");
+    for (i = 0; i < nc; i++) {  //reset all to 0
+      detect_array[i]=0;
+    }
+    detect_array[imax]= 1 ;  //set to detect only max count color
   }
 
+  //
   if (detect_array[0]) { detected_reward = 4; }
   else if (detect_array[1]) { detected_reward = 1; }
   else if (detect_array[2]) { detected_reward = 2; }
   else if (detect_array[3]) { detected_reward = 3; }
   else { detected_reward = 0;}
+
+  if ((detect_array[0] + detect_array[1] + detect_array[2] + detect_array[3])>=1){
+  printf(", POI: %d \n", detected_reward);
+  }
 
   return img;
 }

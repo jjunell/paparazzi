@@ -7,11 +7,13 @@ hrl.c_sim   -  good for sim and optitrack without vision.
     * for sim use with nps target - airframe file: sim_hrl_b, and flight plan: rotorcraft_hrl_sim
     * for optitrack use ap target - airframe file: sim_hrl_b, and flight plan: rotorcraft_hrl_optitrack
     
- 
+hrl.c_vis_1c  - with optitrack and with vision module version 1: detects only red flowers and then determines which flower it's at by the state
 
-hrl.c_vis1  - with optitrack and with vision module version 1: detects only red flowers and then determines which flower it's at by the state
-hrl.c_vis2  - with optitrack and with vision module version 2: detects different colors and identifies which flower/hive it's at based on color
+hrl.c_vis_4c  - with optitrack and with vision module version 2 , using module detect_reward_4c:
+    * detects 4 different colors and identifies which flower/hive it's at based on color (yellow, red, blue, purple)
 
-hrl.c_test1 (tentative)-
-hrl.c_test2 (tentative)-
+hrl.c_test1 (tentative)-  learning from scratch in reality
+hrl.c_test2 (tentative)-  learning from flawed simulation
+   * receives Q-function from simulation at t_nr = 12, then learns in real world where t_nr = 5
+   * receives Q-function from simulation at t_nr = 5, then learns in real world where t_nr = 12
 
