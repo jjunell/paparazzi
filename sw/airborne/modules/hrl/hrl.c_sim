@@ -383,7 +383,6 @@ bool hrl_run(uint8_t wpa, uint8_t wpb){
 
       else {
         printf("Writing to files......\n");
-        k = 1 ; n = 1 ;  //nectarstate 1, opt1
         for (n = 0; n < nopt; n++) {
           for (k = 0; k < Nns+1; k++) {
             for (i = 0; i < nlvs; i++) {

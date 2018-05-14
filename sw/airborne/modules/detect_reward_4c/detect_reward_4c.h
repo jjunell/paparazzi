@@ -32,17 +32,10 @@
 
 //******* FUNCTIONS ********//
 extern void detect_reward_init(void);
-extern void detect_reward_periodic(void);
-uint16_t image_yuv422_color_counter(struct image_t *input, uint8_t y_m, uint8_t y_M, uint8_t u_m, uint8_t u_M, uint8_t v_m, uint8_t v_M);
 
 extern uint8_t detected_reward;
 //extern uint color_count;
 
 extern struct video_listener *listener;
+
 #endif
-
-
-
-
-
-

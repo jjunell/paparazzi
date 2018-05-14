@@ -26,16 +26,11 @@
 
 #include "detect_reward_4c.h"
 
-#include "firmwares/rotorcraft/navigation.h"
-#include "generated/flight_plan.h"
 #include "generated/airframe.h"
-#include "state.h"
 #include "modules/computer_vision/lib/vision/image.h"
 //#include "subsystems/abi.h"
 
-#include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #ifndef DETECTREWARD_FPS
 #define DETECTREWARD_FPS 0       ///< Default FPS (zero means run at camera fps)
@@ -45,8 +40,8 @@ PRINT_CONFIG_VAR(DETECTREWARD_FPS)
 
 struct video_listener *listener = NULL;
 
-uint8_t detected_reward   = false;
-const uint32_t thresholdColorCount   = 0.05 * 124800;   //520 x 240 = 124.800 total pixels  (fwd facing)
+uint8_t detected_reward = 0;
+const uint32_t thresholdColorCount = 0.05 * 124800;   //520 x 240 = 124.800 total pixels  (fwd facing)
 static int detect_array[4] = { 0, 0, 0, 0 };  //logical for each color detection (Y1 = hive, R1 = F1, B1=F2, P1=F3)
 
 uint8_t color_lum_min[4];
@@ -56,23 +51,26 @@ uint8_t color_cb_max[4];
 uint8_t color_cr_min[4];
 uint8_t color_cr_max[4];
 
-int16_t i;
 const int8_t nc = 4;  // number of colors
 
 // Result
-uint color_count[4] = {  0, 0, 0, 0 };
-struct image_t *img;
+uint32_t color_count;
 
+static uint32_t image_yuv422_color_counter(struct image_t *input,
+    uint8_t y_m, uint8_t y_M,
+    uint8_t u_m, uint8_t u_M,
+    uint8_t v_m, uint8_t v_M);
 
-
+static struct image_t *detect_reward_process_img(struct image_t *img);
 
 /*
  * Initialize function
  */
 
-void detect_reward_init()
+void detect_reward_init(void)
 {
- listener = cv_add_to_device(&DETECTREWARD_CAMERA, detect_reward_periodic, DETECTREWARD_FPS);
+ listener = cv_add_to_device(&DETECTREWARD_CAMERA, detect_reward_process_img, DETECTREWARD_FPS);
+
  // yellow color  //84,129, 141
  color_lum_min[0] = 54;
  color_lum_max[0] = 115;
@@ -106,21 +104,18 @@ void detect_reward_init()
  color_cr_max[3]  = 199;
 }
 
-
-void detect_reward_periodic()
+static struct image_t *detect_reward_process_img(struct image_t *img)
 {
+  uint8_t i;
   for (i = 0; i < nc; i++) {
-    color_count[i] = image_yuv422_color_counter(img,
+    color_count = image_yuv422_color_counter(img,
         color_lum_min[i], color_lum_max[i],
         color_cb_min[i], color_cb_max[i],
         color_cr_min[i], color_cr_max[i]
     );
+    detect_array[i] = color_count > thresholdColorCount;
   }
 
-  //
-  for (i = 0; i < nc; i++) {
-    detect_array[i] = color_count[i] > thresholdColorCount;
-  }
   //
   printf("[y,r,b,p]: [ %d %d %d %d ] \n", detect_array[0],detect_array[1],detect_array[2],detect_array[3]);
   //printf("reward_flag: %d %d %d %d  \n", color_count, thresholdColorCount, detected_reward);
@@ -137,7 +132,7 @@ void detect_reward_periodic()
   else if (detect_array[3]) { detected_reward = 3; }
   else { detected_reward = 0;}
 
-
+  return img;
 }
 
 /* // Function
@@ -176,9 +171,12 @@ struct image_t *colorcount_func(struct image_t *img)
  * @param[in] v_M The V maximum value
  * @return The amount of filtered pixels
  */
-uint16_t image_yuv422_color_counter(struct image_t *input, uint8_t y_m, uint8_t y_M, uint8_t u_m, uint8_t u_M, uint8_t v_m, uint8_t v_M)
+static uint32_t image_yuv422_color_counter(struct image_t *input,
+    uint8_t y_m, uint8_t y_M,
+    uint8_t u_m, uint8_t u_M,
+    uint8_t v_m, uint8_t v_M)
 {
-  uint16_t cnt = 0;
+  uint32_t cnt = 0;
   uint8_t *source = (uint8_t *)input->buf;
 
   // Go trough all the pixels
@@ -193,7 +191,7 @@ uint16_t image_yuv422_color_counter(struct image_t *input, uint8_t y_m, uint8_t 
           && (source[2] >= v_m)
           && (source[2] <= v_M)
       ) {
-        cnt ++;
+        cnt++;
       }
 
       // Go to the next 2 pixels

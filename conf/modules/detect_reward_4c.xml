@@ -27,9 +27,8 @@
     <file name="detect_reward_4c.h"/>
   </header>
   
-  <init fun="detect_reward_4c_init()"/>
+  <init fun="detect_reward_init()"/>
   
-  <periodic fun="detect_reward_4c_periodic(struct image_t *img)" freq="10"/>
   <makefile>
     <file name="detect_reward_4c.c"/>
   </makefile>
